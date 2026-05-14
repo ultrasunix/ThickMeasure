@@ -1,0 +1,9 @@
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.desktop text eol=lf
+Makefile text eol=lf
+*.bin binary
+*.png binary
+lit3rick/program/lit3prog binary
+lit3rick/program/utilities/lit3prog binary

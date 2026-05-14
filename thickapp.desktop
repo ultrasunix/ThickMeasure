@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ThickMeasure
+Comment=Ultrasonic thickness measurement
+Exec=/home/pi/thickapp/run_thickapp.sh
+Path=/home/pi/thickapp
+Icon=/home/pi/thickapp/logo.png
+Terminal=false
+Categories=Science;
