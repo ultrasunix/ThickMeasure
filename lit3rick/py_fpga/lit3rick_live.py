@@ -20,10 +20,12 @@ import numpy as np
 
 
 try:
-    from scipy.signal import find_peaks, hilbert
+    from scipy.signal import butter, find_peaks, hilbert, sosfiltfilt
 except Exception:  # pragma: no cover - useful on small Raspberry Pi installs.
+    butter = None
     find_peaks = None
     hilbert = None
+    sosfiltfilt = None
 
 
 FS_HZ = 64_000_000.0
@@ -417,9 +419,37 @@ def acquire_trace(fpga, args: argparse.Namespace | None = None) -> np.ndarray:
         trace = trace[: args.samples]
     baseline = np.mean(trace[-500:]) if trace.size > 500 else np.mean(trace)
     trace = trace - baseline
-    if args is not None and getattr(args, "highpass_hz", 0.0) > 0.0:
-        trace = high_pass_filter(trace, args.fs_hz, args.highpass_hz)
+    if args is not None:
+        low_hz = getattr(args, "bandpass_low_hz", 0.0)
+        high_hz = getattr(args, "bandpass_high_hz", 0.0)
+        if low_hz > 0.0 or high_hz > 0.0:
+            trace = band_pass_filter(trace, args.fs_hz, low_hz, high_hz)
+        elif getattr(args, "highpass_hz", 0.0) > 0.0:
+            trace = high_pass_filter(trace, args.fs_hz, args.highpass_hz)
     return trace
+
+
+def band_pass_filter(trace: np.ndarray, fs_hz: float, low_hz: float, high_hz: float) -> np.ndarray:
+    nyquist = 0.5 * fs_hz
+    low_hz = max(0.0, float(low_hz))
+    high_hz = min(float(high_hz), nyquist * 0.98) if high_hz > 0.0 else nyquist * 0.98
+
+    if trace.size < 16 or (low_hz <= 0.0 and high_hz >= nyquist * 0.98):
+        return trace
+
+    if butter is not None and sosfiltfilt is not None:
+        if low_hz > 0.0:
+            sos = butter(3, [low_hz, high_hz], btype="bandpass", fs=fs_hz, output="sos")
+        else:
+            sos = butter(3, high_hz, btype="lowpass", fs=fs_hz, output="sos")
+        return sosfiltfilt(sos, trace)
+
+    spectrum = np.fft.rfft(trace)
+    freqs = np.fft.rfftfreq(trace.size, d=1.0 / fs_hz)
+    if low_hz > 0.0:
+        spectrum[freqs < low_hz] = 0.0
+    spectrum[freqs > high_hz] = 0.0
+    return np.fft.irfft(spectrum, n=trace.size)
 
 
 def high_pass_filter(trace: np.ndarray, fs_hz: float, cutoff_hz: float) -> np.ndarray:
@@ -585,7 +615,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--smooth-points", type=int, default=7)
     parser.add_argument("--interval-s", type=float, default=0.10)
     parser.add_argument("--capture-wait-s", type=float, default=0.001)
-    parser.add_argument("--highpass-hz", type=float, default=20_000.0)
+    parser.add_argument("--highpass-hz", type=float, default=0.0)
+    parser.add_argument("--bandpass-low-hz", type=float, default=800_000.0)
+    parser.add_argument("--bandpass-high-hz", type=float, default=12_000_000.0)
     parser.add_argument("--history", type=int, default=250)
     parser.add_argument("--thickness-ymin-mm", type=float, default=15.0)
     parser.add_argument("--thickness-ymax-mm", type=float, default=30.0)
