@@ -162,6 +162,8 @@ cdone: high
 
 On fresh Raspberry Pi OS installs, the old WiringPi `gpio` command may be missing. `setup.sh` installs a `/usr/local/bin/gpio` compatibility wrapper for the lit3rick programming script. If you still see `gpio: command not found`, pull the latest repository and rerun `bash setup.sh`.
 
+`setup.sh` also installs the bundled `lit3prog` binary into `/usr/local/bin/lit3prog`, which is required by the lit3rick programming scripts. If you see `lit3prog: command not found`, pull the latest repository and rerun `bash setup.sh`.
+
 ### SPI or I2C not enabled
 
 Run:

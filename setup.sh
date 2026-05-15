@@ -128,6 +128,16 @@ chmod +x "$INSTALL_DIR/run_ThickMeasure.sh"
 chmod +x "$INSTALL_DIR/lit3rick/program/prog_ram.sh" "$INSTALL_DIR/lit3rick/program/prog_flash.sh" || true
 chmod +x "$INSTALL_DIR/lit3rick/program/lit3prog" "$INSTALL_DIR/lit3rick/program/utilities/lit3prog" || true
 
+echo "Installing lit3rick FPGA programmer..."
+if [[ -x "$INSTALL_DIR/lit3rick/program/lit3prog" ]]; then
+  sudo install -m 4755 "$INSTALL_DIR/lit3rick/program/lit3prog" /usr/local/bin/lit3prog
+elif [[ -x "$INSTALL_DIR/lit3rick/program/utilities/lit3prog" ]]; then
+  sudo install -m 4755 "$INSTALL_DIR/lit3rick/program/utilities/lit3prog" /usr/local/bin/lit3prog
+else
+  echo "Could not find bundled lit3prog binary." >&2
+  exit 1
+fi
+
 echo "Allowing the app to program the lit3rick board without storing a password..."
 echo "$TARGET_USER ALL=(root) NOPASSWD: $INSTALL_DIR/lit3rick/program/prog_ram.sh" | sudo tee "$SUDOERS_FILE" >/dev/null
 sudo chmod 0440 "$SUDOERS_FILE"
