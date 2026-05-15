@@ -39,8 +39,8 @@ fi
 
 echo "Installing application into $INSTALL_DIR..."
 sudo install -d -o "$TARGET_USER" -g "$TARGET_USER" "$INSTALL_DIR"
-sudo rm -rf "$INSTALL_DIR/app.py" "$INSTALL_DIR/logo.png" "$INSTALL_DIR/run_thickapp.sh" "$INSTALL_DIR/thickapp.desktop" "$INSTALL_DIR/lit3rick"
-sudo cp -a "$SOURCE_DIR/app.py" "$SOURCE_DIR/logo.png" "$SOURCE_DIR/run_thickapp.sh" "$SOURCE_DIR/thickapp.desktop" "$SOURCE_DIR/lit3rick" "$INSTALL_DIR/"
+sudo rm -rf "$INSTALL_DIR/app.py" "$INSTALL_DIR/logo.png" "$INSTALL_DIR/logo-app.png" "$INSTALL_DIR/run_thickapp.sh" "$INSTALL_DIR/thickapp.desktop" "$INSTALL_DIR/lit3rick"
+sudo cp -a "$SOURCE_DIR/app.py" "$SOURCE_DIR/logo.png" "$SOURCE_DIR/logo-app.png" "$SOURCE_DIR/run_thickapp.sh" "$SOURCE_DIR/thickapp.desktop" "$SOURCE_DIR/lit3rick" "$INSTALL_DIR/"
 sudo chown -R "$TARGET_USER:$TARGET_USER" "$INSTALL_DIR"
 
 chmod +x "$INSTALL_DIR/run_thickapp.sh"

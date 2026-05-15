@@ -25,7 +25,7 @@ from PIL import Image, ImageTk
 
 APP_DIR = Path.home() / "thickapp"
 LIT3RICK_DIR = APP_DIR / "lit3rick" / "py_fpga"
-LOGO_PATH = APP_DIR / "logo.png"
+LOGO_PATH = APP_DIR / "logo-app.png"
 SAVE_DIR = APP_DIR / "sdata-ThickMeasure"
 PROGRAM_DIR = APP_DIR / "lit3rick" / "program"
 PROGRAM_SCRIPT = PROGRAM_DIR / "prog_ram.sh"

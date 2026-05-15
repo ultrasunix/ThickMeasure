@@ -24,7 +24,8 @@ The app can:
 app.py                         ThickMeasure GUI app
 run_thickapp.sh                app launcher
 setup.sh                       Raspberry Pi installer
-logo.png                       logo used by the app and desktop launcher
+logo.png                       blue GMRI logo used by the desktop launcher
+logo-app.png                   yellow GMRI logo used inside the app as Close
 thickapp.desktop               desktop launcher template
 lit3rick/program               lit3rick FPGA programming files
 lit3rick/py_fpga               lit3rick Python control and acquisition files
