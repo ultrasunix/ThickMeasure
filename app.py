@@ -293,13 +293,13 @@ class ThicknessApp:
             return
 
         image = Image.open(LOGO_PATH)
-        logo_width = int(120 * self.ui_scale)
-        logo_height = int(34 * self.ui_scale)
+        logo_width = int(150 * self.ui_scale)
+        logo_height = int(44 * self.ui_scale)
         image.thumbnail((logo_width, logo_height), Image.Resampling.LANCZOS)
         self.logo_image = ImageTk.PhotoImage(image)
-        logo = tk.Label(parent, image=self.logo_image, borderwidth=0, cursor="hand2")
+        logo = tk.Label(parent, image=self.logo_image, borderwidth=0, cursor="hand2", bg=RIBBON_BG)
         logo.bind("<Button-1>", lambda _event: self.on_close())
-        logo.pack(side=tk.RIGHT, padx=(int(8 * self.ui_scale), 0))
+        logo.pack(side=tk.RIGHT, padx=(int(10 * self.ui_scale), int(18 * self.ui_scale)))
 
     def open_keypad(self, target: tk.StringVar, title: str) -> str:
         if self.keypad_window is not None and self.keypad_window.winfo_exists():
