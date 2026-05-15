@@ -92,6 +92,7 @@ class ThicknessApp:
         self.calibrated_first_idx: int | None = None
         self.calibrated_second_idx: int | None = None
         self.calibrated_spacing_samples: int | None = None
+        self.calibrated_zero_idx: int | None = None
         self.keypad_window: tk.Toplevel | None = None
         self.keypad_target: tk.StringVar | None = None
 
@@ -118,7 +119,7 @@ class ThicknessApp:
             min_echo_spacing_us=3.0,
             threshold=8.0,
             smooth_points=7,
-            interval_s=0.10,
+            interval_s=0.20,
             capture_wait_s=0.001,
             highpass_hz=0.0,
             bandpass_low_hz=800_000.0,
@@ -270,11 +271,12 @@ class ThicknessApp:
             self.ax_rf.axvline(0, color="#ff6b6b", ls="--", lw=1.0, alpha=0.9),
         ]
         self.readout = self.ax_rf.text(
-            0.01,
+            0.99,
             0.95,
             "",
             transform=self.ax_rf.transAxes,
             va="top",
+            ha="right",
             fontsize=plot_text_size,
             color=PLOT_FG,
         )
@@ -420,28 +422,52 @@ class ThicknessApp:
 
     def update_rf_axis_limits(self, result) -> None:
         self.ax_rf.set_xlim(0.0, self.args.display_end_us)
-        self.ax_rf.set_ylim(-1.25, 1.25)
+
+    def update_rf_y_limits(self, trace_norm: np.ndarray, env_norm: np.ndarray | None = None) -> None:
+        display_start = max(0, int(self.args.display_start_us * 1e-6 * self.args.fs_hz))
+        display_end = min(trace_norm.size, int(self.args.display_end_us * 1e-6 * self.args.fs_hz))
+        if display_end <= display_start:
+            self.ax_rf.set_ylim(-1.25, 1.25)
+            return
+
+        visible = trace_norm[display_start:display_end]
+        max_amp = float(np.nanmax(np.abs(visible))) if visible.size else 1.0
+        if env_norm is not None:
+            visible_env = env_norm[display_start:display_end]
+            if visible_env.size:
+                max_amp = max(max_amp, float(np.nanmax(np.abs(visible_env))))
+
+        limit = max(1.25, min(3.0, math.ceil(max_amp * 12.0) / 10.0))
+        self.ax_rf.set_ylim(-limit, limit)
 
     def update_thickness_axis_limits(self, thickness_mm: float) -> None:
         return
 
     def detect_tracked_backwall_echoes(self, env: np.ndarray, trace: np.ndarray) -> EchoResult | None:
-        if self.calibrated_first_idx is None or self.calibrated_spacing_samples is None:
+        if self.calibrated_spacing_samples is None:
             return None
 
-        spacing = self.calibrated_spacing_samples
-        first_half_width = max(int(0.18 * spacing), int(0.8e-6 * self.args.fs_hz))
-        second_half_width = max(int(0.22 * spacing), int(0.9e-6 * self.args.fs_hz))
-
-        first_idx = self.peak_in_window(
-            env,
-            self.calibrated_first_idx - first_half_width,
-            self.calibrated_first_idx + first_half_width,
+        start = max(
+            int(self.args.gate_start_us * 1e-6 * self.args.fs_hz),
+            int(self.args.first_echo_min_us * 1e-6 * self.args.fs_hz),
+            0,
         )
+        end = min(env.size, int(self.args.gate_end_us * 1e-6 * self.args.fs_hz))
+        if end <= start + 3:
+            return None
+
+        first_idx = self.peak_in_window(env, start, end)
         if first_idx is None:
             return None
 
-        expected_second = first_idx + spacing
+        zero_idx = self.calibrated_zero_idx if self.calibrated_zero_idx is not None else 0
+        live_spacing = first_idx - zero_idx
+        min_spacing = int(self.args.min_echo_spacing_us * 1e-6 * self.args.fs_hz)
+        if live_spacing < min_spacing:
+            return None
+
+        expected_second = first_idx + live_spacing
+        second_half_width = max(int(0.25 * live_spacing), int(0.9e-6 * self.args.fs_hz))
         second_idx = self.peak_in_window(
             env,
             expected_second - second_half_width,
@@ -513,6 +539,7 @@ class ThicknessApp:
             "frame",
             "thickness_mm",
             "raw_thickness_mm",
+            "first_bw_only_mm",
             "velocity_m_s",
             "echo_spacing_us",
             "first_echo_us",
@@ -526,6 +553,7 @@ class ThicknessApp:
                     "frame": 0,
                     "thickness_mm": 0,
                     "raw_thickness_mm": 0,
+                    "first_bw_only_mm": 0,
                     "velocity_m_s": 0,
                     "echo_spacing_us": 0,
                     "first_echo_us": 0,
@@ -744,23 +772,34 @@ class ThicknessApp:
     def update_plot(self, frame: int, trace: np.ndarray, env: np.ndarray, result, velocity_m_s: float) -> None:
         if result is None:
             display_scale = np.max(np.abs(trace)) or 1.0
-            self.rf_line.set_ydata(trace / display_scale)
-            self.env_line.set_ydata(env / display_scale)
-            self.ax_rf.set_ylim(-1.25, 1.25)
+            trace_norm = trace / display_scale
+            env_norm = env / display_scale
+            self.rf_line.set_ydata(trace_norm)
+            self.env_line.set_ydata(env_norm)
+            self.update_rf_y_limits(trace_norm, env_norm)
             self.readout.set_text("echoes not detected - adjust gate/threshold")
             return
 
         display_scale = abs(env[result.first_idx]) or 1.0
-        self.rf_line.set_ydata(trace / display_scale)
-        self.env_line.set_ydata(env / display_scale)
+        trace_norm = trace / display_scale
+        env_norm = env / display_scale
+        self.rf_line.set_ydata(trace_norm)
+        self.env_line.set_ydata(env_norm)
+        self.update_rf_y_limits(trace_norm, env_norm)
 
         raw_thickness_mm = velocity_m_s * result.dt_s * 500.0
+        zero_idx = self.calibrated_zero_idx if self.calibrated_zero_idx is not None else 0
+        first_bw_only_mm = velocity_m_s * max(0.0, (result.first_idx - zero_idx) / self.args.fs_hz) * 500.0
+        for line, idx in zip(self.peak_lines, (result.first_idx, result.second_idx)):
+            x_us = idx / self.args.fs_hz * 1e6
+            line.set_xdata([x_us, x_us])
+
         if self.filtered_thickness_mm is not None and abs(raw_thickness_mm - self.filtered_thickness_mm) > 0.8:
             self.readout.set_text(
                 f"velocity: {velocity_m_s:.1f} m/s\n"
                 f"rejected echo jump\n"
-                f"thickness: {self.filtered_thickness_mm:.3f} mm\n"
-                f"raw: {raw_thickness_mm:.3f} mm"
+                f"1st and 2nd BW: {self.filtered_thickness_mm:.3f} mm\n"
+                f"1st BW only: {first_bw_only_mm:.3f} mm"
             )
             self.status_var.set(f"Measuring - thickness {self.filtered_thickness_mm:.3f} mm")
             return
@@ -786,6 +825,7 @@ class ThicknessApp:
                 "frame": frame,
                 "thickness_mm": thickness_mm,
                 "raw_thickness_mm": raw_thickness_mm,
+                "first_bw_only_mm": first_bw_only_mm,
                 "velocity_m_s": velocity_m_s,
                 "echo_spacing_us": result.dt_s * 1e6,
                 "first_echo_us": result.first_idx / self.args.fs_hz * 1e6,
@@ -793,15 +833,11 @@ class ThicknessApp:
             }
         )
 
-        for line, idx in zip(self.peak_lines, (result.first_idx, result.second_idx)):
-            x_us = idx / self.args.fs_hz * 1e6
-            line.set_xdata([x_us, x_us])
-
         self.readout.set_text(
             f"velocity: {velocity_m_s:.1f} m/s\n"
             f"echo spacing: {result.dt_s * 1e6:.3f} us\n"
-            f"thickness: {thickness_mm:.3f} mm\n"
-            f"raw: {raw_thickness_mm:.3f} mm"
+            f"1st and 2nd BW: {thickness_mm:.3f} mm\n"
+            f"1st BW only: {first_bw_only_mm:.3f} mm"
         )
         self.status_var.set(f"Measuring - thickness {thickness_mm:.3f} mm")
 
@@ -902,6 +938,7 @@ class ThicknessApp:
         self.calibrated_first_idx = first_idx
         self.calibrated_second_idx = second_idx
         self.calibrated_spacing_samples = second_idx - first_idx
+        self.calibrated_zero_idx = first_idx - self.calibrated_spacing_samples
         self.calibration_selecting = False
         self.start_button.config(state=tk.NORMAL)
         self.calibration_button.config(state=tk.NORMAL)
