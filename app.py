@@ -115,7 +115,8 @@ class ThicknessApp:
             gate_start_us=2.0,
             gate_end_us=60.0,
             display_start_us=0.0,
-            display_end_us=60.0,
+            display_end_us=40.0,
+            display_end_mm=90.0,
             min_echo_spacing_us=1.0,
             threshold=8.0,
             smooth_points=7,
@@ -443,7 +444,7 @@ class ThicknessApp:
         x_axis = self.distance_axis_mm(velocity_m_s)
         self.rf_line.set_xdata(x_axis)
         self.env_line.set_xdata(x_axis)
-        self.ax_rf.set_xlim(0.0, float(np.max(x_axis)) if x_axis.size else 1.0)
+        self.ax_rf.set_xlim(0.0, self.args.display_end_mm)
 
     def update_calibration_axis(self) -> None:
         self.ax_rf.set_xlabel("Time (\u03bcs)", fontsize=self.plot_text_size, color=PLOT_FG)
