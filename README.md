@@ -22,11 +22,12 @@ The app can:
 
 ```text
 app.py                         ThickMeasure GUI app
-run_thickapp.sh                app launcher
+run_ThickMeasure.sh            app launcher
 setup.sh                       Raspberry Pi installer
 logo.png                       blue GMRI logo used by the desktop launcher
 logo-app.png                   yellow GMRI logo used inside the app as Close
-thickapp.desktop               desktop launcher template
+ThickMeasure.desktop           desktop launcher template
+LICENSE                        MIT license
 lit3rick/program               lit3rick FPGA programming files
 lit3rick/py_fpga               lit3rick Python control and acquisition files
 ```
@@ -51,7 +52,7 @@ The installer will:
 
 - install required Python and Raspberry Pi packages
 - enable SPI and I2C using `raspi-config` when available
-- copy the app into `/home/<user>/thickapp`
+- copy the app into `/home/<user>/ThickMeasure`
 - copy the bundled lit3rick `program` and `py_fpga` folders
 - create a passwordless sudo rule only for `prog_ram.sh`
 - create a desktop launcher
@@ -68,7 +69,7 @@ sudo reboot
 If the app does not open automatically, run:
 
 ```bash
-~/thickapp/run_thickapp.sh
+~/ThickMeasure/run_ThickMeasure.sh
 ```
 
 or double-click the `ThickMeasure` desktop icon.
@@ -105,7 +106,7 @@ The keypad supports:
 CSV files are saved in:
 
 ```text
-/home/<user>/thickapp/sdata-ThickMeasure
+/home/<user>/ThickMeasure/sdata-ThickMeasure
 ```
 
 File names use this format:
@@ -141,13 +142,13 @@ This usually means the lit3rick board is not programmed or the I2C/SPI connectio
 The app tries to run this automatically:
 
 ```bash
-sudo /home/<user>/thickapp/lit3rick/program/prog_ram.sh
+sudo /home/<user>/ThickMeasure/lit3rick/program/prog_ram.sh
 ```
 
 You can test it manually:
 
 ```bash
-cd ~/thickapp/lit3rick/program
+cd ~/ThickMeasure/lit3rick/program
 sudo ./prog_ram.sh
 ```
 
@@ -183,7 +184,7 @@ ls ~/.config/autostart/ThickMeasure.desktop
 Manual launch:
 
 ```bash
-~/thickapp/run_thickapp.sh
+~/ThickMeasure/run_ThickMeasure.sh
 ```
 
 ### No echoes detected
