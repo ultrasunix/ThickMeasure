@@ -58,6 +58,8 @@ The installer will:
 - create a desktop launcher
 - create an autostart entry so ThickMeasure opens after desktop login
 
+If you installed an older version and files disappeared from `~/ThickMeasure`, re-clone the repository or run `git restore .` from inside the clone, then run the updated `bash setup.sh` again.
+
 Reboot after installation:
 
 ```bash

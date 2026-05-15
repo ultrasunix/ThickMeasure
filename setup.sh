@@ -15,6 +15,8 @@ if [[ -z "$TARGET_HOME" || ! -d "$TARGET_HOME" ]]; then
   exit 1
 fi
 
+INSTALL_DIR_RESOLVED="$(mkdir -p "$INSTALL_DIR" && cd "$INSTALL_DIR" && pwd)"
+
 echo "Installing system packages..."
 sudo apt-get update
 sudo apt-get install -y \
@@ -38,10 +40,14 @@ else
 fi
 
 echo "Installing application into $INSTALL_DIR..."
-sudo install -d -o "$TARGET_USER" -g "$TARGET_USER" "$INSTALL_DIR"
-sudo rm -rf "$INSTALL_DIR/app.py" "$INSTALL_DIR/logo.png" "$INSTALL_DIR/logo-app.png" "$INSTALL_DIR/run_ThickMeasure.sh" "$INSTALL_DIR/ThickMeasure.desktop" "$INSTALL_DIR/lit3rick"
-sudo cp -a "$SOURCE_DIR/app.py" "$SOURCE_DIR/logo.png" "$SOURCE_DIR/logo-app.png" "$SOURCE_DIR/run_ThickMeasure.sh" "$SOURCE_DIR/ThickMeasure.desktop" "$SOURCE_DIR/lit3rick" "$INSTALL_DIR/"
-sudo chown -R "$TARGET_USER:$TARGET_USER" "$INSTALL_DIR"
+if [[ "$SOURCE_DIR" == "$INSTALL_DIR_RESOLVED" ]]; then
+  echo "Source directory is already $INSTALL_DIR; installing in place."
+else
+  sudo install -d -o "$TARGET_USER" -g "$TARGET_USER" "$INSTALL_DIR"
+  sudo rm -rf "$INSTALL_DIR/app.py" "$INSTALL_DIR/logo.png" "$INSTALL_DIR/logo-app.png" "$INSTALL_DIR/run_ThickMeasure.sh" "$INSTALL_DIR/ThickMeasure.desktop" "$INSTALL_DIR/lit3rick"
+  sudo cp -a "$SOURCE_DIR/app.py" "$SOURCE_DIR/logo.png" "$SOURCE_DIR/logo-app.png" "$SOURCE_DIR/run_ThickMeasure.sh" "$SOURCE_DIR/ThickMeasure.desktop" "$SOURCE_DIR/lit3rick" "$INSTALL_DIR/"
+  sudo chown -R "$TARGET_USER:$TARGET_USER" "$INSTALL_DIR"
+fi
 
 chmod +x "$INSTALL_DIR/run_ThickMeasure.sh"
 chmod +x "$INSTALL_DIR/lit3rick/program/prog_ram.sh" "$INSTALL_DIR/lit3rick/program/prog_flash.sh" || true
