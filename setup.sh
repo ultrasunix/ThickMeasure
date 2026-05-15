@@ -39,6 +39,81 @@ else
   echo "raspi-config not found; please enable SPI and I2C manually if needed."
 fi
 
+echo "Checking lit3rick GPIO programming helper..."
+if ! command -v gpio >/dev/null 2>&1; then
+  sudo tee /usr/local/bin/gpio >/dev/null <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+map_wiringpi_to_bcm() {
+  case "$1" in
+    0) echo 17 ;; 1) echo 18 ;; 2) echo 27 ;; 3) echo 22 ;; 4) echo 23 ;;
+    5) echo 24 ;; 6) echo 25 ;; 7) echo 4 ;; 8) echo 2 ;; 9) echo 3 ;;
+    10) echo 8 ;; 11) echo 7 ;; 12) echo 10 ;; 13) echo 9 ;; 14) echo 11 ;;
+    15) echo 14 ;; 16) echo 15 ;; 21) echo 5 ;; 22) echo 6 ;; 23) echo 13 ;;
+    24) echo 19 ;; 25) echo 26 ;; 26) echo 12 ;; 27) echo 16 ;; 28) echo 20 ;;
+    29) echo 21 ;;
+    *) echo "Unsupported WiringPi pin: $1" >&2; exit 2 ;;
+  esac
+}
+
+set_pin() {
+  local bcm="$1"
+  local mode="$2"
+  if command -v pinctrl >/dev/null 2>&1; then
+    pinctrl set "$bcm" "$mode"
+  elif command -v raspi-gpio >/dev/null 2>&1; then
+    case "$mode" in
+      op) raspi-gpio set "$bcm" op ;;
+      ip) raspi-gpio set "$bcm" ip ;;
+      a0) raspi-gpio set "$bcm" a0 ;;
+      dh) raspi-gpio set "$bcm" dh ;;
+      dl) raspi-gpio set "$bcm" dl ;;
+      *) echo "Unsupported GPIO mode: $mode" >&2; exit 2 ;;
+    esac
+  else
+    echo "Neither pinctrl nor raspi-gpio is available; cannot control GPIO pins." >&2
+    exit 127
+  fi
+}
+
+if [[ $# -lt 3 ]]; then
+  echo "Usage: gpio mode <wiringpi-pin> <IN|OUT|alt0> | gpio write <wiringpi-pin> <0|1>" >&2
+  exit 2
+fi
+
+command_name="$1"
+pin="$2"
+bcm="$(map_wiringpi_to_bcm "$pin")"
+
+case "$command_name" in
+  mode)
+    case "${3,,}" in
+      out) set_pin "$bcm" op ;;
+      in) set_pin "$bcm" ip ;;
+      alt0) set_pin "$bcm" a0 ;;
+      *) echo "Unsupported gpio mode: $3" >&2; exit 2 ;;
+    esac
+    ;;
+  write)
+    case "$3" in
+      1) set_pin "$bcm" dh ;;
+      0) set_pin "$bcm" dl ;;
+      *) echo "Unsupported gpio write value: $3" >&2; exit 2 ;;
+    esac
+    ;;
+  *)
+    echo "Unsupported gpio command: $command_name" >&2
+    exit 2
+    ;;
+esac
+EOF
+  sudo chmod 0755 /usr/local/bin/gpio
+  echo "Installed /usr/local/bin/gpio compatibility wrapper for lit3rick prog_ram.sh."
+else
+  echo "gpio command already available."
+fi
+
 echo "Installing application into $INSTALL_DIR..."
 if [[ "$SOURCE_DIR" == "$INSTALL_DIR_RESOLVED" ]]; then
   echo "Source directory is already $INSTALL_DIR; installing in place."
