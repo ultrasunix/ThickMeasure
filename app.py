@@ -13,7 +13,6 @@ from argparse import Namespace
 from collections import deque
 from datetime import datetime
 from pathlib import Path
-import math
 
 import matplotlib
 
@@ -143,8 +142,8 @@ class ThicknessApp:
             tgc_points=16,
             thickness_ymin_mm=15.0,
             thickness_ymax_mm=30.0,
-            thickness_median_frames=9,
-            thickness_ema_alpha=0.25,
+            thickness_median_frames=3,
+            thickness_ema_alpha=0.65,
             timing_method="xcorr",
             xcorr_half_window_us=0.9,
             approximate_velocity_m_s=5850.0,
@@ -437,8 +436,7 @@ class ThicknessApp:
             if visible_env.size:
                 max_amp = max(max_amp, float(np.nanmax(np.abs(visible_env))))
 
-        limit = max(1.25, min(3.0, math.ceil(max_amp * 12.0) / 10.0))
-        self.ax_rf.set_ylim(-limit, limit)
+        self.ax_rf.set_ylim(-2.0, 2.0)
 
     def update_thickness_axis_limits(self, thickness_mm: float) -> None:
         return
@@ -787,25 +785,19 @@ class ThicknessApp:
         self.env_line.set_ydata(env_norm)
         self.update_rf_y_limits(trace_norm, env_norm)
 
-        raw_thickness_mm = velocity_m_s * result.dt_s * 500.0
+        first_second_thickness_mm = velocity_m_s * result.dt_s * 500.0
         zero_idx = self.calibrated_zero_idx if self.calibrated_zero_idx is not None else 0
         first_bw_only_mm = velocity_m_s * max(0.0, (result.first_idx - zero_idx) / self.args.fs_hz) * 500.0
         for line, idx in zip(self.peak_lines, (result.first_idx, result.second_idx)):
             x_us = idx / self.args.fs_hz * 1e6
             line.set_xdata([x_us, x_us])
 
-        if self.filtered_thickness_mm is not None and abs(raw_thickness_mm - self.filtered_thickness_mm) > 0.8:
-            self.readout.set_text(
-                f"velocity: {velocity_m_s:.1f} m/s\n"
-                f"rejected echo jump\n"
-                f"1st and 2nd BW: {self.filtered_thickness_mm:.3f} mm\n"
-                f"1st BW only: {first_bw_only_mm:.3f} mm"
-            )
-            self.status_var.set(f"Measuring - thickness {self.filtered_thickness_mm:.3f} mm")
-            return
-
         self.update_rf_axis_limits(result)
-        self.recent_raw_thickness.append(raw_thickness_mm)
+        if self.filtered_thickness_mm is not None and abs(first_second_thickness_mm - self.filtered_thickness_mm) > 2.0:
+            self.recent_raw_thickness.clear()
+            self.filtered_thickness_mm = None
+
+        self.recent_raw_thickness.append(first_second_thickness_mm)
         median_thickness_mm = float(np.median(self.recent_raw_thickness))
 
         if self.filtered_thickness_mm is None:
@@ -824,7 +816,7 @@ class ThicknessApp:
                 "timestamp": datetime.now().isoformat(timespec="seconds"),
                 "frame": frame,
                 "thickness_mm": thickness_mm,
-                "raw_thickness_mm": raw_thickness_mm,
+                "raw_thickness_mm": first_second_thickness_mm,
                 "first_bw_only_mm": first_bw_only_mm,
                 "velocity_m_s": velocity_m_s,
                 "echo_spacing_us": result.dt_s * 1e6,
