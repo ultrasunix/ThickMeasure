@@ -147,12 +147,20 @@ chmod +x "$INSTALL_DIR/lit3rick/program/lit3prog" "$INSTALL_DIR/lit3rick/program
 
 echo "Installing lit3rick FPGA programmer..."
 if [[ -x "$INSTALL_DIR/lit3rick/program/lit3prog" ]]; then
-  sudo install -m 4755 "$INSTALL_DIR/lit3rick/program/lit3prog" /usr/local/bin/lit3prog
+  sudo install -o root -g root -m 0755 "$INSTALL_DIR/lit3rick/program/lit3prog" /usr/local/bin/lit3prog
 elif [[ -x "$INSTALL_DIR/lit3rick/program/utilities/lit3prog" ]]; then
-  sudo install -m 4755 "$INSTALL_DIR/lit3rick/program/utilities/lit3prog" /usr/local/bin/lit3prog
+  sudo install -o root -g root -m 0755 "$INSTALL_DIR/lit3rick/program/utilities/lit3prog" /usr/local/bin/lit3prog
 else
   echo "Could not find bundled lit3prog binary." >&2
   exit 1
+fi
+sudo chmod 0755 /usr/local/bin/lit3prog
+if [[ ! -x /usr/local/bin/lit3prog ]]; then
+  echo "/usr/local/bin/lit3prog is not executable after installation." >&2
+  exit 1
+fi
+if command -v ldd >/dev/null 2>&1 && ldd /usr/local/bin/lit3prog 2>/dev/null | grep -q 'not found'; then
+  echo "Warning: /usr/local/bin/lit3prog has a missing shared library. Check WiringPi installation if programming fails." >&2
 fi
 
 echo "Allowing the app to program the lit3rick board without storing a password..."
