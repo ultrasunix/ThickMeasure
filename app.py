@@ -254,10 +254,10 @@ class ThicknessApp:
         self.ax_rf = self.fig.add_subplot(1, 1, 1)
         self.ax_rf.set_facecolor(PLOT_BG)
 
-        plot_text_size = 20
-        self.ax_rf.set_xlabel("Time (\u03bcs)", fontsize=plot_text_size, color=PLOT_FG)
-        self.ax_rf.set_ylabel("Amplitude (~)", fontsize=plot_text_size, color=PLOT_FG)
-        self.ax_rf.tick_params(axis="both", labelsize=plot_text_size, colors=PLOT_FG)
+        self.plot_text_size = 20
+        self.ax_rf.set_xlabel("Time (\u03bcs)", fontsize=self.plot_text_size, color=PLOT_FG)
+        self.ax_rf.set_ylabel("Amplitude (~)", fontsize=self.plot_text_size, color=PLOT_FG)
+        self.ax_rf.tick_params(axis="both", labelsize=self.plot_text_size, colors=PLOT_FG)
         for spine in self.ax_rf.spines.values():
             spine.set_color(PLOT_AXIS)
             spine.set_linewidth(1.0)
@@ -277,7 +277,7 @@ class ThicknessApp:
             transform=self.ax_rf.transAxes,
             va="top",
             ha="right",
-            fontsize=plot_text_size,
+            fontsize=self.plot_text_size,
             color=PLOT_FG,
         )
 
@@ -300,7 +300,11 @@ class ThicknessApp:
         self.logo_image = ImageTk.PhotoImage(image)
         logo = tk.Label(parent, image=self.logo_image, borderwidth=0, cursor="hand2", bg=RIBBON_BG)
         logo.bind("<Button-1>", lambda _event: self.on_close())
-        logo.pack(side=tk.RIGHT, padx=(int(10 * self.ui_scale), int(18 * self.ui_scale)))
+        logo.pack(
+            side=tk.RIGHT,
+            padx=(int(10 * self.ui_scale), int(18 * self.ui_scale)),
+            pady=(int(8 * self.ui_scale), 0),
+        )
 
     def open_keypad(self, target: tk.StringVar, title: str) -> str:
         if self.keypad_window is not None and self.keypad_window.winfo_exists():
@@ -420,7 +424,32 @@ class ThicknessApp:
         window.protocol("WM_DELETE_WINDOW", cancel)
         return "break"
 
-    def update_rf_axis_limits(self, result) -> None:
+    def time_axis_us(self, samples: int | None = None) -> np.ndarray:
+        count = samples if samples is not None else self.args.samples
+        return np.arange(count) / self.args.fs_hz * 1e6
+
+    def distance_axis_mm(self, velocity_m_s: float, samples: int | None = None) -> np.ndarray:
+        count = samples if samples is not None else self.args.samples
+        zero_idx = self.calibrated_zero_idx if self.calibrated_zero_idx is not None else 0
+        time_s = (np.arange(count) - zero_idx) / self.args.fs_hz
+        return np.maximum(0.0, velocity_m_s * time_s * 500.0)
+
+    def echo_distance_mm(self, idx: int, velocity_m_s: float) -> float:
+        zero_idx = self.calibrated_zero_idx if self.calibrated_zero_idx is not None else 0
+        return max(0.0, velocity_m_s * (idx - zero_idx) / self.args.fs_hz * 500.0)
+
+    def update_measurement_axis(self, velocity_m_s: float) -> None:
+        self.ax_rf.set_xlabel("Distance (mm)", fontsize=self.plot_text_size, color=PLOT_FG)
+        x_axis = self.distance_axis_mm(velocity_m_s)
+        self.rf_line.set_xdata(x_axis)
+        self.env_line.set_xdata(x_axis)
+        self.ax_rf.set_xlim(0.0, float(np.max(x_axis)) if x_axis.size else 1.0)
+
+    def update_calibration_axis(self) -> None:
+        self.ax_rf.set_xlabel("Time (\u03bcs)", fontsize=self.plot_text_size, color=PLOT_FG)
+        x_axis = self.time_axis_us()
+        self.rf_line.set_xdata(x_axis)
+        self.env_line.set_xdata(x_axis)
         self.ax_rf.set_xlim(0.0, self.args.display_end_us)
 
     def update_rf_y_limits(self, trace_norm: np.ndarray, env_norm: np.ndarray | None = None) -> None:
@@ -810,6 +839,7 @@ class ThicknessApp:
         self.root.after(50, self.process_messages)
 
     def update_plot(self, frame: int, trace: np.ndarray, env: np.ndarray, result, velocity_m_s: float) -> None:
+        self.update_measurement_axis(velocity_m_s)
         if result is None:
             display_scale = np.max(np.abs(trace)) or 1.0
             trace_norm = trace / display_scale
@@ -831,10 +861,9 @@ class ThicknessApp:
         zero_idx = self.calibrated_zero_idx if self.calibrated_zero_idx is not None else 0
         first_bw_only_mm = velocity_m_s * max(0.0, (result.first_idx - zero_idx) / self.args.fs_hz) * 500.0
         for line, idx in zip(self.peak_lines, (result.first_idx, result.second_idx)):
-            x_us = idx / self.args.fs_hz * 1e6
-            line.set_xdata([x_us, x_us])
+            x_mm = self.echo_distance_mm(idx, velocity_m_s)
+            line.set_xdata([x_mm, x_mm])
 
-        self.update_rf_axis_limits(result)
         if self.filtered_thickness_mm is not None and abs(first_second_thickness_mm - self.filtered_thickness_mm) > 2.0:
             self.recent_raw_thickness.clear()
             self.filtered_thickness_mm = None
@@ -893,9 +922,9 @@ class ThicknessApp:
         else:
             display_scale = np.max(np.abs(trace)) or 1.0
 
+        self.update_calibration_axis()
         self.rf_line.set_ydata(trace / display_scale)
         self.env_line.set_ydata(env / display_scale)
-        self.ax_rf.set_xlim(0.0, self.args.display_end_us)
         self.ax_rf.set_ylim(-1.25, 1.25)
 
         if result is not None:
