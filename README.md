@@ -54,7 +54,10 @@ The installer will:
 - enable SPI and I2C using `raspi-config` when available
 - copy the app into `/home/<user>/ThickMeasure`
 - copy the bundled lit3rick `program` and `py_fpga` folders
+- build and install WiringPi when `libwiringPi.so` is missing
+- install `lit3prog` into `/usr/local/bin`
 - create a passwordless sudo rule only for `prog_ram.sh`
+- create a boot-time service that runs `prog_ram.sh`
 - create a desktop launcher
 - create an autostart entry so ThickMeasure opens after desktop login
 
@@ -163,6 +166,8 @@ cdone: high
 On fresh Raspberry Pi OS installs, the old WiringPi `gpio` command may be missing. `setup.sh` installs a `/usr/local/bin/gpio` compatibility wrapper for the lit3rick programming script. If you still see `gpio: command not found`, pull the latest repository and rerun `bash setup.sh`.
 
 `setup.sh` also installs the bundled `lit3prog` binary into `/usr/local/bin/lit3prog`, which is required by the lit3rick programming scripts. If you see `lit3prog: command not found`, pull the latest repository and rerun `bash setup.sh`.
+
+`setup.sh` builds WiringPi automatically when `libwiringPi.so` is missing. It also enables the `thickmeasure-lit3rick.service` systemd service, which runs `prog_ram.sh` at boot so the lit3rick board is programmed before normal use.
 
 ### SPI or I2C not enabled
 

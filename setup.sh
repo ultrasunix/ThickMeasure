@@ -9,6 +9,7 @@ SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DESKTOP_DIR="$TARGET_HOME/Desktop"
 AUTOSTART_DIR="$TARGET_HOME/.config/autostart"
 SUDOERS_FILE="/etc/sudoers.d/thickmeasure-prog-ram"
+SYSTEMD_SERVICE="/etc/systemd/system/thickmeasure-lit3rick.service"
 
 if [[ -z "$TARGET_HOME" || ! -d "$TARGET_HOME" ]]; then
   echo "Could not determine home directory for user: $TARGET_USER" >&2
@@ -29,7 +30,8 @@ sudo apt-get install -y \
   python3-smbus2 \
   python3-spidev \
   i2c-tools \
-  git
+  git \
+  build-essential
 
 if command -v raspi-config >/dev/null 2>&1; then
   echo "Enabling SPI and I2C..."
@@ -37,6 +39,21 @@ if command -v raspi-config >/dev/null 2>&1; then
   sudo raspi-config nonint do_i2c 0 || true
 else
   echo "raspi-config not found; please enable SPI and I2C manually if needed."
+fi
+
+echo "Checking WiringPi runtime for lit3prog..."
+if ! ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so'; then
+  WIRINGPI_BUILD_DIR="$(mktemp -d)"
+  echo "libwiringPi.so not found; building WiringPi in $WIRINGPI_BUILD_DIR..."
+  git clone --depth 1 https://github.com/WiringPi/WiringPi.git "$WIRINGPI_BUILD_DIR"
+  (
+    cd "$WIRINGPI_BUILD_DIR"
+    ./build
+  )
+  rm -rf "$WIRINGPI_BUILD_DIR"
+  sudo ldconfig
+else
+  echo "WiringPi library already available."
 fi
 
 echo "Checking lit3rick GPIO programming helper..."
@@ -142,6 +159,25 @@ echo "Allowing the app to program the lit3rick board without storing a password.
 echo "$TARGET_USER ALL=(root) NOPASSWD: $INSTALL_DIR/lit3rick/program/prog_ram.sh" | sudo tee "$SUDOERS_FILE" >/dev/null
 sudo chmod 0440 "$SUDOERS_FILE"
 sudo visudo -cf "$SUDOERS_FILE" >/dev/null
+
+echo "Creating boot-time lit3rick programming service..."
+sudo tee "$SYSTEMD_SERVICE" >/dev/null <<EOF
+[Unit]
+Description=Program lit3rick FPGA RAM for ThickMeasure
+After=local-fs.target
+Wants=local-fs.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=$INSTALL_DIR/lit3rick/program
+ExecStart=$INSTALL_DIR/lit3rick/program/prog_ram.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable thickmeasure-lit3rick.service
 
 echo "Creating desktop launcher and autostart entry..."
 install_desktop_file() {
