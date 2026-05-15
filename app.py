@@ -56,6 +56,7 @@ from lit3rick_thickness_live import (  # noqa: E402
     detect_backwall_echoes_guided,
     refine_echo_spacing_by_correlation,
     robust_median,
+    simple_find_peaks,
     smooth,
 )
 
@@ -115,7 +116,7 @@ class ThicknessApp:
             gate_end_us=60.0,
             display_start_us=0.0,
             display_end_us=60.0,
-            min_echo_spacing_us=3.0,
+            min_echo_spacing_us=1.0,
             threshold=8.0,
             smooth_points=7,
             interval_s=0.20,
@@ -147,7 +148,7 @@ class ThicknessApp:
             timing_method="xcorr",
             xcorr_half_window_us=0.9,
             approximate_velocity_m_s=5850.0,
-            first_echo_min_us=4.0,
+            first_echo_min_us=2.0,
             second_search_fraction=0.20,
             min_velocity_ratio=0.85,
             max_velocity_ratio=1.15,
@@ -445,6 +446,7 @@ class ThicknessApp:
         if self.calibrated_spacing_samples is None:
             return None
 
+        zero_idx = self.calibrated_zero_idx if self.calibrated_zero_idx is not None else 0
         start = max(
             int(self.args.gate_start_us * 1e-6 * self.args.fs_hz),
             int(self.args.first_echo_min_us * 1e-6 * self.args.fs_hz),
@@ -454,24 +456,12 @@ class ThicknessApp:
         if end <= start + 3:
             return None
 
-        first_idx = self.peak_in_window(env, start, end)
-        if first_idx is None:
+        peaks = self.find_echo_candidates(env, start, end)
+        if peaks.size == 0:
             return None
 
-        zero_idx = self.calibrated_zero_idx if self.calibrated_zero_idx is not None else 0
-        live_spacing = first_idx - zero_idx
-        min_spacing = int(self.args.min_echo_spacing_us * 1e-6 * self.args.fs_hz)
-        if live_spacing < min_spacing:
-            return None
-
-        expected_second = first_idx + live_spacing
-        second_half_width = max(int(0.25 * live_spacing), int(0.9e-6 * self.args.fs_hz))
-        second_idx = self.peak_in_window(
-            env,
-            expected_second - second_half_width,
-            expected_second + second_half_width,
-        )
-        if second_idx is None or second_idx <= first_idx:
+        first_idx, second_idx = self.select_live_echo_pair(env, peaks, zero_idx)
+        if first_idx is None or second_idx is None:
             return None
 
         result = EchoResult(
@@ -489,6 +479,58 @@ class ThicknessApp:
                 self.args.xcorr_half_window_us,
             )
         return result
+
+    def find_echo_candidates(self, env: np.ndarray, start: int, end: int) -> np.ndarray:
+        gated = env[start:end]
+        if gated.size < 3:
+            return np.array([], dtype=int)
+
+        noise = float(np.median(gated))
+        mad = float(np.median(np.abs(gated - noise))) + 1e-12
+        height = noise + max(4.0, self.args.threshold * 0.55) * 1.4826 * mad
+        distance = max(1, int(0.45e-6 * self.args.fs_hz))
+        peaks = simple_find_peaks(gated, height=height, distance=distance)
+        return peaks + start
+
+    def select_live_echo_pair(
+        self,
+        env: np.ndarray,
+        peaks: np.ndarray,
+        zero_idx: int,
+    ) -> tuple[int | None, int | None]:
+        min_spacing = int(self.args.min_echo_spacing_us * 1e-6 * self.args.fs_hz)
+        max_first_candidates = 12
+        valid_firsts = [int(idx) for idx in peaks if int(idx) - zero_idx >= min_spacing]
+        if not valid_firsts:
+            return None, None
+
+        best: tuple[float, int, int] | None = None
+        for order, first_idx in enumerate(valid_firsts[:max_first_candidates]):
+            live_spacing = first_idx - zero_idx
+            expected_second = first_idx + live_spacing
+            if expected_second >= env.size:
+                continue
+
+            second_half_width = max(int(0.22 * live_spacing), int(0.45e-6 * self.args.fs_hz))
+            second_idx = self.peak_in_window(
+                env,
+                expected_second - second_half_width,
+                expected_second + second_half_width,
+            )
+            if second_idx is None or second_idx <= first_idx:
+                continue
+
+            first_amp = float(env[first_idx])
+            second_amp = float(env[second_idx])
+            order_penalty = 1.0 + 0.35 * order
+            score = first_amp * second_amp / order_penalty
+            if best is None or score > best[0]:
+                best = (score, first_idx, second_idx)
+
+        if best is None:
+            return None, None
+        _, first_idx, second_idx = best
+        return first_idx, second_idx
 
     def peak_in_window(self, env: np.ndarray, left: int, right: int) -> int | None:
         left = max(0, int(left))
