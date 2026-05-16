@@ -24,10 +24,12 @@ The app can:
 app.py                         English ThickMeasure GUI app
 app_ch.py                      Chinese GMRI测厚软件 GUI app
 run_ThickMeasure.sh            app launcher
+run_ThickMeasure_CH.sh         Chinese app launcher
 setup.sh                       Raspberry Pi installer
 logo.png                       blue GMRI logo used by the desktop launcher
 logo-app.png                   yellow GMRI logo used inside the app as Close
 ThickMeasure.desktop           desktop launcher template
+ThickMeasure_CH.desktop        Chinese desktop launcher template
 LICENSE                        MIT license
 lit3rick/program               lit3rick FPGA programming files
 lit3rick/py_fpga               lit3rick Python control and acquisition files
@@ -60,6 +62,7 @@ The installer will:
 - create a passwordless sudo rule only for `prog_ram.sh`
 - create a boot-time service that runs `prog_ram.sh`
 - create a desktop launcher
+- create a Chinese desktop launcher
 - create an autostart entry so ThickMeasure opens after desktop login
 
 If you installed an older version and files disappeared from `~/ThickMeasure`, re-clone the repository or run `git restore .` from inside the clone, then run the updated `bash setup.sh` again.
@@ -79,6 +82,14 @@ If the app does not open automatically, run:
 ```
 
 or double-click the `ThickMeasure` desktop icon.
+
+To launch the Chinese version, run:
+
+```bash
+~/ThickMeasure/run_ThickMeasure_CH.sh
+```
+
+or double-click the `GMRI测厚软件` desktop icon.
 
 ## Typical Use
 
