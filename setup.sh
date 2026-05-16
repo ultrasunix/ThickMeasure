@@ -133,8 +133,8 @@ if [[ "$SOURCE_DIR" == "$INSTALL_DIR_RESOLVED" ]]; then
   echo "Source directory is already $INSTALL_DIR; installing in place."
 else
   sudo install -d -o "$TARGET_USER" -g "$TARGET_USER" "$INSTALL_DIR"
-  sudo rm -rf "$INSTALL_DIR/app.py" "$INSTALL_DIR/logo.png" "$INSTALL_DIR/logo-app.png" "$INSTALL_DIR/run_ThickMeasure.sh" "$INSTALL_DIR/ThickMeasure.desktop" "$INSTALL_DIR/lit3rick"
-  sudo cp -a "$SOURCE_DIR/app.py" "$SOURCE_DIR/logo.png" "$SOURCE_DIR/logo-app.png" "$SOURCE_DIR/run_ThickMeasure.sh" "$SOURCE_DIR/ThickMeasure.desktop" "$SOURCE_DIR/lit3rick" "$INSTALL_DIR/"
+  sudo rm -rf "$INSTALL_DIR/app.py" "$INSTALL_DIR/app_ch.py" "$INSTALL_DIR/logo.png" "$INSTALL_DIR/logo-app.png" "$INSTALL_DIR/run_ThickMeasure.sh" "$INSTALL_DIR/ThickMeasure.desktop" "$INSTALL_DIR/lit3rick"
+  sudo cp -a "$SOURCE_DIR/app.py" "$SOURCE_DIR/app_ch.py" "$SOURCE_DIR/logo.png" "$SOURCE_DIR/logo-app.png" "$SOURCE_DIR/run_ThickMeasure.sh" "$SOURCE_DIR/ThickMeasure.desktop" "$SOURCE_DIR/lit3rick" "$INSTALL_DIR/"
   sudo chown -R "$TARGET_USER:$TARGET_USER" "$INSTALL_DIR"
 fi
 
@@ -212,7 +212,7 @@ install_desktop_file "$DESKTOP_DIR/ThickMeasure.desktop"
 install_desktop_file "$AUTOSTART_DIR/ThickMeasure.desktop"
 
 echo "Checking Python files..."
-python3 -m py_compile "$INSTALL_DIR/app.py" "$INSTALL_DIR/lit3rick/py_fpga/lit3rick_thickness_live.py" "$INSTALL_DIR/lit3rick/py_fpga/py_fpga.py"
+python3 -m py_compile "$INSTALL_DIR/app.py" "$INSTALL_DIR/app_ch.py" "$INSTALL_DIR/lit3rick/py_fpga/lit3rick_thickness_live.py" "$INSTALL_DIR/lit3rick/py_fpga/py_fpga.py"
 
 echo
 echo "Installation complete."

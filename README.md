@@ -21,7 +21,8 @@ The app can:
 ## Repository Contents
 
 ```text
-app.py                         ThickMeasure GUI app
+app.py                         English ThickMeasure GUI app
+app_ch.py                      Chinese GMRI测厚软件 GUI app
 run_ThickMeasure.sh            app launcher
 setup.sh                       Raspberry Pi installer
 logo.png                       blue GMRI logo used by the desktop launcher
