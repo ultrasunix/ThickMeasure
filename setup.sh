@@ -145,22 +145,25 @@ chmod +x "$INSTALL_DIR/run_ThickMeasure.sh"
 chmod +x "$INSTALL_DIR/lit3rick/program/prog_ram.sh" "$INSTALL_DIR/lit3rick/program/prog_flash.sh" || true
 chmod +x "$INSTALL_DIR/lit3rick/program/lit3prog" "$INSTALL_DIR/lit3rick/program/utilities/lit3prog" || true
 
-echo "Installing lit3rick FPGA programmer..."
-if [[ -x "$INSTALL_DIR/lit3rick/program/lit3prog" ]]; then
-  sudo install -o root -g root -m 0755 "$INSTALL_DIR/lit3rick/program/lit3prog" /usr/local/bin/lit3prog
-elif [[ -x "$INSTALL_DIR/lit3rick/program/utilities/lit3prog" ]]; then
-  sudo install -o root -g root -m 0755 "$INSTALL_DIR/lit3rick/program/utilities/lit3prog" /usr/local/bin/lit3prog
-else
-  echo "Could not find bundled lit3prog binary." >&2
+echo "Building and installing lit3rick FPGA programmer..."
+if [[ ! -f "$INSTALL_DIR/lit3rick/program/lit3prog.cc" ]]; then
+  echo "Could not find lit3prog.cc source." >&2
   exit 1
 fi
+(
+  cd "$INSTALL_DIR/lit3rick/program"
+  gcc -o lit3prog -Wall -Os lit3prog.cc -lwiringPi -lrt -lstdc++
+)
+sudo install -o root -g root -m 0755 "$INSTALL_DIR/lit3rick/program/lit3prog" /usr/local/bin/lit3prog
 sudo chmod 0755 /usr/local/bin/lit3prog
 if [[ ! -x /usr/local/bin/lit3prog ]]; then
   echo "/usr/local/bin/lit3prog is not executable after installation." >&2
   exit 1
 fi
 if command -v ldd >/dev/null 2>&1 && ldd /usr/local/bin/lit3prog 2>/dev/null | grep -q 'not found'; then
-  echo "Warning: /usr/local/bin/lit3prog has a missing shared library. Check WiringPi installation if programming fails." >&2
+  echo "/usr/local/bin/lit3prog has a missing shared library. Check WiringPi installation." >&2
+  ldd /usr/local/bin/lit3prog >&2 || true
+  exit 1
 fi
 
 echo "Allowing the app to program the lit3rick board without storing a password..."
