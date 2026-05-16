@@ -17,8 +17,18 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("TkAgg")
+matplotlib.rcParams["font.sans-serif"] = [
+    "Noto Sans CJK SC",
+    "Noto Sans CJK JP",
+    "WenQuanYi Zen Hei",
+    "WenQuanYi Micro Hei",
+    "SimHei",
+    "DejaVu Sans",
+]
+matplotlib.rcParams["axes.unicode_minus"] = False
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+from matplotlib.font_manager import FontProperties
 import numpy as np
 from PIL import Image, ImageTk
 
@@ -44,6 +54,13 @@ BUTTON_BG = "#343944"
 BUTTON_ACTIVE_BG = "#4b5563"
 ENTRY_BG = "#111317"
 ENTRY_FG = "#ffe66d"
+CJK_FONT_PATHS = [
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+]
 
 from lit3rick_thickness_live import (  # noqa: E402
     EchoResult,
@@ -99,10 +116,29 @@ class ThicknessApp:
         self.status_var = tk.StringVar(value="就绪")
         self.thickness_var = tk.StringVar(value=f"{self.args.known_thickness_mm:.1f}")
         self.approx_velocity_var = tk.StringVar(value=f"{self.args.approximate_velocity_m_s:.0f}")
+        self.plot_font = self.find_cjk_plot_font()
         self.build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.after(200, self.start_board_programming)
         self.root.after(50, self.process_messages)
+
+    def find_cjk_plot_font(self) -> FontProperties | None:
+        for font_path in CJK_FONT_PATHS:
+            if Path(font_path).exists():
+                return FontProperties(fname=font_path)
+        return None
+
+    def axis_label_kwargs(self) -> dict[str, object]:
+        kwargs: dict[str, object] = {"fontsize": self.plot_text_size, "color": PLOT_FG}
+        if self.plot_font is not None:
+            kwargs["fontproperties"] = self.plot_font
+        return kwargs
+
+    def plot_text_kwargs(self) -> dict[str, object]:
+        kwargs: dict[str, object] = {"fontsize": self.plot_text_size, "color": PLOT_FG}
+        if self.plot_font is not None:
+            kwargs["fontproperties"] = self.plot_font
+        return kwargs
 
     def make_args(self) -> Namespace:
         acq_us = 60.0
@@ -256,8 +292,8 @@ class ThicknessApp:
         self.ax_rf.set_facecolor(PLOT_BG)
 
         self.plot_text_size = 20
-        self.ax_rf.set_xlabel("时间 (\u03bcs)", fontsize=self.plot_text_size, color=PLOT_FG)
-        self.ax_rf.set_ylabel("幅值 (~)", fontsize=self.plot_text_size, color=PLOT_FG)
+        self.ax_rf.set_xlabel("时间 (\u03bcs)", **self.axis_label_kwargs())
+        self.ax_rf.set_ylabel("幅值 (~)", **self.axis_label_kwargs())
         self.ax_rf.tick_params(axis="both", labelsize=self.plot_text_size, colors=PLOT_FG)
         for spine in self.ax_rf.spines.values():
             spine.set_color(PLOT_AXIS)
@@ -278,8 +314,7 @@ class ThicknessApp:
             transform=self.ax_rf.transAxes,
             va="top",
             ha="right",
-            fontsize=self.plot_text_size,
-            color=PLOT_FG,
+            **self.plot_text_kwargs(),
         )
 
         self.ax_rf.set_xlim(self.args.display_start_us, self.args.display_end_us)
@@ -440,14 +475,14 @@ class ThicknessApp:
         return max(0.0, velocity_m_s * (idx - zero_idx) / self.args.fs_hz * 500.0)
 
     def update_measurement_axis(self, velocity_m_s: float) -> None:
-        self.ax_rf.set_xlabel("距离 (mm)", fontsize=self.plot_text_size, color=PLOT_FG)
+        self.ax_rf.set_xlabel("距离 (mm)", **self.axis_label_kwargs())
         x_axis = self.distance_axis_mm(velocity_m_s)
         self.rf_line.set_xdata(x_axis)
         self.env_line.set_xdata(x_axis)
         self.ax_rf.set_xlim(0.0, self.args.display_end_mm)
 
     def update_calibration_axis(self) -> None:
-        self.ax_rf.set_xlabel("时间 (\u03bcs)", fontsize=self.plot_text_size, color=PLOT_FG)
+        self.ax_rf.set_xlabel("时间 (\u03bcs)", **self.axis_label_kwargs())
         x_axis = self.time_axis_us()
         self.rf_line.set_xdata(x_axis)
         self.env_line.set_xdata(x_axis)

@@ -30,6 +30,7 @@ sudo apt-get install -y \
   python3-smbus2 \
   python3-spidev \
   i2c-tools \
+  fonts-noto-cjk \
   git \
   build-essential
 
