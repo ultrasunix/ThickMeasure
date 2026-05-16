@@ -211,8 +211,8 @@ install_chinese_desktop_file() {
   cat > "$output_path" <<EOF
 [Desktop Entry]
 Type=Application
-Name=GMRI测厚软件
-Comment=超声测厚软件
+Name=ThickMeasureCN
+Comment=Chinese ultrasonic thickness measurement
 Exec=$INSTALL_DIR/run_ThickMeasure_CH.sh
 Path=$INSTALL_DIR
 Icon=$INSTALL_DIR/logo.png
@@ -228,7 +228,7 @@ install_english_desktop_file "$INSTALL_DIR/ThickMeasure.desktop"
 install_english_desktop_file "$DESKTOP_DIR/ThickMeasure.desktop"
 install_english_desktop_file "$AUTOSTART_DIR/ThickMeasure.desktop"
 install_chinese_desktop_file "$INSTALL_DIR/ThickMeasure_CH.desktop"
-install_chinese_desktop_file "$DESKTOP_DIR/GMRI测厚软件.desktop"
+install_chinese_desktop_file "$DESKTOP_DIR/ThickMeasureCN.desktop"
 
 echo "Checking Python files..."
 python3 -m py_compile "$INSTALL_DIR/app.py" "$INSTALL_DIR/app_ch.py" "$INSTALL_DIR/lit3rick/py_fpga/lit3rick_thickness_live.py" "$INSTALL_DIR/lit3rick/py_fpga/py_fpga.py"

@@ -1,9 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=GMRI测厚软件
-Comment=超声测厚软件
-Exec=/home/pi/ThickMeasure/run_ThickMeasure_CH.sh
-Path=/home/pi/ThickMeasure
-Icon=/home/pi/ThickMeasure/logo.png
+Name=ThickMeasureCN
+Comment=Chinese ultrasonic thickness measurement
+Exec=sh -c "$HOME/ThickMeasure/run_ThickMeasure_CH.sh"
+Icon=utilities-terminal
 Terminal=false
 Categories=Science;

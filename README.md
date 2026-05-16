@@ -89,7 +89,7 @@ To launch the Chinese version, run:
 ~/ThickMeasure/run_ThickMeasure_CH.sh
 ```
 
-or double-click the `GMRI测厚软件` desktop icon.
+or double-click the `ThickMeasureCN` desktop icon.
 
 ## Typical Use
 
