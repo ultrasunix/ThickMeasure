@@ -56,9 +56,8 @@ else
   echo "WiringPi library already available."
 fi
 
-echo "Checking lit3rick GPIO programming helper..."
-if ! command -v gpio >/dev/null 2>&1; then
-  sudo tee /usr/local/bin/gpio >/dev/null <<'EOF'
+echo "Installing lit3rick GPIO programming helper..."
+sudo tee /usr/local/bin/gpio >/dev/null <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -125,11 +124,9 @@ case "$command_name" in
     ;;
 esac
 EOF
-  sudo chmod 0755 /usr/local/bin/gpio
-  echo "Installed /usr/local/bin/gpio compatibility wrapper for lit3rick prog_ram.sh."
-else
-  echo "gpio command already available."
-fi
+sudo chown root:root /usr/local/bin/gpio
+sudo chmod 0755 /usr/local/bin/gpio
+echo "Installed /usr/local/bin/gpio compatibility wrapper for lit3rick prog_ram.sh."
 
 echo "Installing application into $INSTALL_DIR..."
 if [[ "$SOURCE_DIR" == "$INSTALL_DIR_RESOLVED" ]]; then
@@ -155,6 +152,7 @@ fi
   gcc -o lit3prog -Wall -Os lit3prog.cc -lwiringPi -lrt -lstdc++
 )
 sudo install -o root -g root -m 0755 "$INSTALL_DIR/lit3rick/program/lit3prog" /usr/local/bin/lit3prog
+sudo chown root:root /usr/local/bin/lit3prog
 sudo chmod 0755 /usr/local/bin/lit3prog
 if [[ ! -x /usr/local/bin/lit3prog ]]; then
   echo "/usr/local/bin/lit3prog is not executable after installation." >&2
