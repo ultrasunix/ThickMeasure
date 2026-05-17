@@ -7,5 +7,9 @@ if [[ "${1:-}" == "purge" || "${1:-}" == "remove" ]]; then
   systemctl daemon-reload >/dev/null 2>&1 || true
   rm -f /usr/local/bin/ThickMeasureCN
   rm -f /usr/share/applications/ThickMeasureCN.desktop
+  rm -f /usr/share/icons/hicolor/256x256/apps/thickmeasurecn.png
+  if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -q /usr/share/icons/hicolor || true
+  fi
   rm -f /etc/sudoers.d/thickmeasure-prog-ram
 fi

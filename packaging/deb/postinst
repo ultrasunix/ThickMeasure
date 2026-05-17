@@ -3,6 +3,7 @@ set -euo pipefail
 
 APP_ROOT="/opt/thickmeasurecn/ThickMeasure"
 DESKTOP_FILE="/usr/share/applications/ThickMeasureCN.desktop"
+APP_ICON="/usr/share/icons/hicolor/256x256/apps/thickmeasurecn.png"
 SERVICE_FILE="/etc/systemd/system/thickmeasure-lit3rick.service"
 SUDOERS_FILE="/etc/sudoers.d/thickmeasure-prog-ram"
 
@@ -120,6 +121,11 @@ EOF
 }
 
 create_desktop_file() {
+  install -D -o root -g root -m 0644 "$APP_ROOT/logo.png" "$APP_ICON"
+  if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -q /usr/share/icons/hicolor || true
+  fi
+
   cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Type=Application
@@ -127,7 +133,7 @@ Name=ThickMeasureCN
 Comment=Chinese ultrasonic thickness measurement
 Exec=/usr/local/bin/ThickMeasureCN
 Path=$APP_ROOT
-Icon=$APP_ROOT/logo.png
+Icon=thickmeasurecn
 Terminal=false
 Categories=Science;
 EOF

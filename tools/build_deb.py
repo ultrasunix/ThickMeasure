@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "thickmeasurecn"
 VERSION = "0.1.0"
 
-EXCLUDED_DIRS = {".git", "__pycache__", "dist", "build", "packaging", "tools"}
+EXCLUDED_DIRS = {".git", "__pycache__", "dist", "build", "packaging", "release", "tools"}
 EXCLUDED_SUFFIXES = {".pyc", ".swp"}
 
 

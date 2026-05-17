@@ -6,6 +6,7 @@ First Raspberry Pi Linux installer release for the Chinese ThickMeasure applicat
 
 - Adds `ThickMeasureCN_0.1.0_all.deb` for Raspberry Pi OS / Debian-based Linux.
 - Installs the Chinese `ThickMeasureCN` touchscreen app.
+- Installs the GMRI logo as the Linux app icon.
 - Installs required Linux and Python packages through `apt`.
 - Builds WiringPi automatically when `libwiringPi.so` is missing.
 - Builds and installs `lit3prog` into `/usr/local/bin/lit3prog`.

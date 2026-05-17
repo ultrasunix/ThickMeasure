@@ -51,7 +51,7 @@ The current prebuilt installer is stored in this repository at:
 release/ThickMeasureCN_0.1.0_all.deb
 ```
 
-This installs ThickMeasureCN into `/opt/thickmeasurecn/ThickMeasure`, creates the `ThickMeasureCN` desktop icon, and sets the Chinese app as the default startup app.
+This installs ThickMeasureCN into `/opt/thickmeasurecn/ThickMeasure`, installs the GMRI logo as the Linux app icon, creates the `ThickMeasureCN` desktop icon, and sets the Chinese app as the default startup app.
 
 To build the `.deb` package from this repository:
 
