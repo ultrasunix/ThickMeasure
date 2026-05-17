@@ -45,6 +45,12 @@ For the Chinese version, use the `.deb` installer on Raspberry Pi OS:
 sudo apt install ./ThickMeasureCN_0.1.0_all.deb
 ```
 
+The current prebuilt installer is stored in this repository at:
+
+```text
+release/ThickMeasureCN_0.1.0_all.deb
+```
+
 This installs ThickMeasureCN into `/opt/thickmeasurecn/ThickMeasure`, creates the `ThickMeasureCN` desktop icon, and sets the Chinese app as the default startup app.
 
 To build the `.deb` package from this repository:
