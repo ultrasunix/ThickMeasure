@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${1:-}" == "purge" || "${1:-}" == "remove" ]]; then
+  systemctl disable thickmeasure-lit3rick.service >/dev/null 2>&1 || true
+  rm -f /etc/systemd/system/thickmeasure-lit3rick.service
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  rm -f /usr/local/bin/ThickMeasureCN
+  rm -f /usr/share/applications/ThickMeasureCN.desktop
+  rm -f /etc/sudoers.d/thickmeasure-prog-ram
+fi

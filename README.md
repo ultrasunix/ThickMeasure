@@ -26,6 +26,8 @@ app_ch.py                      Chinese GMRI测厚软件 GUI app
 run_ThickMeasure.sh            app launcher
 run_ThickMeasure_CH.sh         Chinese app launcher
 setup.sh                       Raspberry Pi installer
+tools/build_deb.py             builds the ThickMeasureCN .deb installer
+packaging/deb                  Debian package control scripts
 logo.png                       blue GMRI logo used by the desktop launcher
 logo-app.png                   yellow GMRI logo used inside the app as Close
 ThickMeasure.desktop           desktop launcher template
@@ -37,7 +39,30 @@ lit3rick/py_fpga               lit3rick Python control and acquisition files
 
 ## Install On A New Raspberry Pi
 
-Clone this repository on the Raspberry Pi:
+For the Chinese version, use the `.deb` installer on Raspberry Pi OS:
+
+```bash
+sudo apt install ./ThickMeasureCN_0.1.0_all.deb
+```
+
+This installs ThickMeasureCN into `/opt/thickmeasurecn/ThickMeasure`, creates the `ThickMeasureCN` desktop icon, and sets the Chinese app as the default startup app.
+
+To build the `.deb` package from this repository:
+
+```bash
+python3 tools/build_deb.py
+```
+
+The package is written to:
+
+```text
+dist/ThickMeasureCN_0.1.0_all.deb
+```
+
+Note: a `.deb` package is convenient for Linux installation, but it is not an encrypted or secret format. People can still inspect package contents with standard Linux tools.
+
+For manual installation, clone this repository on the Raspberry Pi:
+
 
 ```bash
 cd ~

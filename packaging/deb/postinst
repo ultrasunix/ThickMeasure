@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="/opt/thickmeasurecn/ThickMeasure"
+DESKTOP_FILE="/usr/share/applications/ThickMeasureCN.desktop"
+SERVICE_FILE="/etc/systemd/system/thickmeasure-lit3rick.service"
+SUDOERS_FILE="/etc/sudoers.d/thickmeasure-prog-ram"
+
+find_target_user() {
+  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER:-}" != "root" ]]; then
+    echo "$SUDO_USER"
+    return
+  fi
+
+  local user_name
+  user_name="$(awk -F: '$3 >= 1000 && $3 < 60000 && $6 ~ /^\/home\// { print $1; exit }' /etc/passwd)"
+  if [[ -n "$user_name" ]]; then
+    echo "$user_name"
+  else
+    echo "root"
+  fi
+}
+
+install_gpio_wrapper() {
+  cat > /usr/local/bin/gpio <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+map_wiringpi_to_bcm() {
+  case "$1" in
+    0) echo 17 ;; 1) echo 18 ;; 2) echo 27 ;; 3) echo 22 ;; 4) echo 23 ;;
+    5) echo 24 ;; 6) echo 25 ;; 7) echo 4 ;; 8) echo 2 ;; 9) echo 3 ;;
+    10) echo 8 ;; 11) echo 7 ;; 12) echo 10 ;; 13) echo 9 ;; 14) echo 11 ;;
+    15) echo 14 ;; 16) echo 15 ;; 21) echo 5 ;; 22) echo 6 ;; 23) echo 13 ;;
+    24) echo 19 ;; 25) echo 26 ;; 26) echo 12 ;; 27) echo 16 ;; 28) echo 20 ;;
+    29) echo 21 ;;
+    *) echo "Unsupported WiringPi pin: $1" >&2; exit 2 ;;
+  esac
+}
+
+set_pin() {
+  local bcm="$1"
+  local mode="$2"
+  if command -v pinctrl >/dev/null 2>&1; then
+    pinctrl set "$bcm" "$mode"
+  elif command -v raspi-gpio >/dev/null 2>&1; then
+    case "$mode" in
+      op) raspi-gpio set "$bcm" op ;;
+      ip) raspi-gpio set "$bcm" ip ;;
+      a0) raspi-gpio set "$bcm" a0 ;;
+      dh) raspi-gpio set "$bcm" dh ;;
+      dl) raspi-gpio set "$bcm" dl ;;
+      *) echo "Unsupported GPIO mode: $mode" >&2; exit 2 ;;
+    esac
+  else
+    echo "Neither pinctrl nor raspi-gpio is available; cannot control GPIO pins." >&2
+    exit 127
+  fi
+}
+
+if [[ $# -lt 3 ]]; then
+  echo "Usage: gpio mode <wiringpi-pin> <IN|OUT|alt0> | gpio write <wiringpi-pin> <0|1>" >&2
+  exit 2
+fi
+
+command_name="$1"
+pin="$2"
+bcm="$(map_wiringpi_to_bcm "$pin")"
+
+case "$command_name" in
+  mode)
+    case "${3,,}" in
+      out) set_pin "$bcm" op ;;
+      in) set_pin "$bcm" ip ;;
+      alt0) set_pin "$bcm" a0 ;;
+      *) echo "Unsupported gpio mode: $3" >&2; exit 2 ;;
+    esac
+    ;;
+  write)
+    case "$3" in
+      1) set_pin "$bcm" dh ;;
+      0) set_pin "$bcm" dl ;;
+      *) echo "Unsupported gpio write value: $3" >&2; exit 2 ;;
+    esac
+    ;;
+  *)
+    echo "Unsupported gpio command: $command_name" >&2
+    exit 2
+    ;;
+esac
+EOF
+  chown root:root /usr/local/bin/gpio
+  chmod 0755 /usr/local/bin/gpio
+}
+
+build_wiringpi_if_needed() {
+  if ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so'; then
+    return
+  fi
+
+  local build_dir
+  build_dir="$(mktemp -d)"
+  git clone --depth 1 https://github.com/WiringPi/WiringPi.git "$build_dir"
+  (
+    cd "$build_dir"
+    ./build
+  )
+  rm -rf "$build_dir"
+  ldconfig
+}
+
+create_launcher() {
+  cat > /usr/local/bin/ThickMeasureCN <<EOF
+#!/usr/bin/env bash
+cd "$APP_ROOT" || exit 1
+exec python3 app_ch.py
+EOF
+  chown root:root /usr/local/bin/ThickMeasureCN
+  chmod 0755 /usr/local/bin/ThickMeasureCN
+}
+
+create_desktop_file() {
+  cat > "$DESKTOP_FILE" <<EOF
+[Desktop Entry]
+Type=Application
+Name=ThickMeasureCN
+Comment=Chinese ultrasonic thickness measurement
+Exec=/usr/local/bin/ThickMeasureCN
+Path=$APP_ROOT
+Icon=$APP_ROOT/logo.png
+Terminal=false
+Categories=Science;
+EOF
+  chmod 0644 "$DESKTOP_FILE"
+}
+
+create_user_shortcuts() {
+  local target_user="$1"
+  local target_home
+  target_home="$(getent passwd "$target_user" | cut -d: -f6)"
+  [[ -n "$target_home" && -d "$target_home" ]] || return 0
+
+  install -d -o "$target_user" -g "$target_user" "$target_home/Desktop" "$target_home/.config/autostart"
+  cp "$DESKTOP_FILE" "$target_home/Desktop/ThickMeasureCN.desktop"
+  cp "$DESKTOP_FILE" "$target_home/.config/autostart/ThickMeasureCN.desktop"
+  rm -f "$target_home/.config/autostart/ThickMeasure.desktop"
+  chmod 0755 "$target_home/Desktop/ThickMeasureCN.desktop" "$target_home/.config/autostart/ThickMeasureCN.desktop"
+  chown "$target_user:$target_user" "$target_home/Desktop/ThickMeasureCN.desktop" "$target_home/.config/autostart/ThickMeasureCN.desktop"
+}
+
+configure_board_programming() {
+  chmod +x "$APP_ROOT/lit3rick/program/prog_ram.sh" "$APP_ROOT/lit3rick/program/prog_flash.sh" || true
+  (
+    cd "$APP_ROOT/lit3rick/program"
+    gcc -o lit3prog -Wall -Os lit3prog.cc -lwiringPi -lrt -lstdc++
+  )
+  install -o root -g root -m 0755 "$APP_ROOT/lit3rick/program/lit3prog" /usr/local/bin/lit3prog
+
+  cat > "$SERVICE_FILE" <<EOF
+[Unit]
+Description=Program lit3rick FPGA RAM for ThickMeasure
+After=local-fs.target
+Wants=local-fs.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=$APP_ROOT/lit3rick/program
+ExecStart=$APP_ROOT/lit3rick/program/prog_ram.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload || true
+  systemctl enable thickmeasure-lit3rick.service || true
+}
+
+main() {
+  local target_user
+  target_user="$(find_target_user)"
+
+  chmod +x "$APP_ROOT/run_ThickMeasure.sh" "$APP_ROOT/run_ThickMeasure_CH.sh"
+
+  if command -v raspi-config >/dev/null 2>&1; then
+    raspi-config nonint do_spi 0 || true
+    raspi-config nonint do_i2c 0 || true
+  fi
+
+  build_wiringpi_if_needed
+  install_gpio_wrapper
+  create_launcher
+  create_desktop_file
+  create_user_shortcuts "$target_user"
+  configure_board_programming
+
+  echo "$target_user ALL=(root) NOPASSWD: $APP_ROOT/lit3rick/program/prog_ram.sh" > "$SUDOERS_FILE"
+  chmod 0440 "$SUDOERS_FILE"
+  visudo -cf "$SUDOERS_FILE" >/dev/null
+
+  python3 -m py_compile "$APP_ROOT/app_ch.py" "$APP_ROOT/app.py" || true
+
+  echo "ThickMeasureCN is installed. Reboot is recommended before first use."
+}
+
+main "$@"

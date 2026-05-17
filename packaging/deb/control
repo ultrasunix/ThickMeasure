@@ -1,0 +1,10 @@
+Package: thickmeasurecn
+Version: 0.1.0
+Section: science
+Priority: optional
+Architecture: all
+Maintainer: ultrasunix <x_sun@outlook.com>
+Depends: bash, sudo, systemd, ca-certificates, git, build-essential, python3, python3-tk, python3-numpy, python3-scipy, python3-matplotlib, python3-pil, python3-smbus2, python3-spidev, i2c-tools, fonts-noto-cjk
+Description: Chinese ThickMeasure ultrasonic thickness measurement app
+ ThickMeasureCN is the Chinese Raspberry Pi application for live ultrasonic
+ thickness measurement with the lit3rick single-channel ultrasonic controller.
