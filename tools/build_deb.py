@@ -43,7 +43,7 @@ def add_text(tar: tarfile.TarFile, name: str, text: str, mode: int = 0o644) -> N
 
 def make_tar_xz(files: list[tuple[Path, str, int]]) -> bytes:
     buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w:xz") as tar:
+    with tarfile.open(fileobj=buffer, mode="w:xz", format=tarfile.GNU_FORMAT) as tar:
         added_dirs: set[str] = set()
         for source, dest, mode in files:
             for parent in reversed(PurePosixPath(dest).parents):
@@ -75,7 +75,7 @@ def make_tar_xz(files: list[tuple[Path, str, int]]) -> bytes:
 def make_control_tar() -> bytes:
     buffer = io.BytesIO()
     control_dir = ROOT / "packaging" / "deb"
-    with tarfile.open(fileobj=buffer, mode="w:xz") as tar:
+    with tarfile.open(fileobj=buffer, mode="w:xz", format=tarfile.GNU_FORMAT) as tar:
         for name, mode in (("control", 0o644), ("postinst", 0o755), ("postrm", 0o755)):
             source = control_dir / name
             info = tar.gettarinfo(str(source), arcname=f"./{name}")
