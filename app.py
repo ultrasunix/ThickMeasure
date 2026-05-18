@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import queue
 import csv
+import os
 import subprocess
 import sys
 import threading
@@ -23,7 +24,7 @@ import numpy as np
 from PIL import Image, ImageTk
 
 
-APP_DIR = Path.home() / "ThickMeasure"
+APP_DIR = Path(os.environ.get("THICKMEASURE_APP_DIR", Path.home() / "ThickMeasure")).expanduser()
 LIT3RICK_DIR = APP_DIR / "lit3rick" / "py_fpga"
 LOGO_PATH = APP_DIR / "logo-app.png"
 SAVE_DIR = APP_DIR / "sdata-ThickMeasure"

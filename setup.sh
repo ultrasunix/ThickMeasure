@@ -43,7 +43,14 @@ else
 fi
 
 gpio_reports_version() {
-  command -v gpio >/dev/null 2>&1 && gpio -v >/dev/null 2>&1
+  local output
+  if ! command -v gpio >/dev/null 2>&1; then
+    return 1
+  fi
+  output="$(gpio -v 2>&1 || true)"
+  [[ "$output" == *"gpio version"* || "$output" == *"wiringPi"* || "$output" == *"Raspberry Pi"* ]] \
+    && [[ "$output" != *"compatibility wrapper"* ]] \
+    && [[ "$output" != Usage:* ]]
 }
 
 echo "Checking WiringPi runtime for lit3prog..."
@@ -55,6 +62,12 @@ if ! ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so' || ! gpio_reports_versi
     cd "$WIRINGPI_BUILD_DIR"
     ./build
   )
+  if ! gpio_reports_version; then
+    GPIO_CANDIDATE="$(find "$WIRINGPI_BUILD_DIR" -path "*/gpio/gpio" -type f -perm /111 | head -n 1 || true)"
+    if [[ -n "$GPIO_CANDIDATE" ]]; then
+      sudo install -o root -g root -m 0755 "$GPIO_CANDIDATE" /usr/local/bin/gpio
+    fi
+  fi
   rm -rf "$WIRINGPI_BUILD_DIR"
   sudo ldconfig
 else

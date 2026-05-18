@@ -23,7 +23,7 @@ find_target_user() {
 }
 
 install_gpio_wrapper() {
-  if command -v gpio >/dev/null 2>&1 && gpio -v >/dev/null 2>&1; then
+  if gpio_is_real_wiringpi; then
     echo "Using WiringPi gpio command: $(command -v gpio)"
     return
   fi
@@ -107,7 +107,7 @@ EOF
 }
 
 build_wiringpi_if_needed() {
-  if ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so' && command -v gpio >/dev/null 2>&1 && gpio -v >/dev/null 2>&1; then
+  if ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so' && gpio_is_real_wiringpi; then
     return
   fi
 
@@ -119,14 +119,33 @@ build_wiringpi_if_needed() {
     cd "$build_dir"
     ./build
   )
+  if ! gpio_is_real_wiringpi; then
+    local gpio_candidate
+    gpio_candidate="$(find "$build_dir" -path "*/gpio/gpio" -type f -perm /111 | head -n 1 || true)"
+    if [[ -n "$gpio_candidate" ]]; then
+      install -o root -g root -m 0755 "$gpio_candidate" /usr/local/bin/gpio
+    fi
+  fi
   rm -rf "$build_dir"
   ldconfig
+}
+
+gpio_is_real_wiringpi() {
+  local output
+  if ! command -v gpio >/dev/null 2>&1; then
+    return 1
+  fi
+  output="$(gpio -v 2>&1 || true)"
+  [[ "$output" == *"gpio version"* || "$output" == *"wiringPi"* || "$output" == *"Raspberry Pi"* ]] \
+    && [[ "$output" != *"compatibility wrapper"* ]] \
+    && [[ "$output" != Usage:* ]]
 }
 
 create_launcher() {
   cat > /usr/local/bin/ThickMeasureCN <<EOF
 #!/usr/bin/env bash
 cd "$APP_ROOT" || exit 1
+export THICKMEASURE_APP_DIR="$APP_ROOT"
 exec python3 app_ch.py
 EOF
   chown root:root /usr/local/bin/ThickMeasureCN
@@ -149,6 +168,7 @@ Path=$APP_ROOT
 Icon=thickmeasurecn
 Terminal=false
 Categories=Science;
+StartupNotify=false
 EOF
   chmod 0644 "$DESKTOP_FILE"
 }
@@ -161,10 +181,32 @@ create_user_shortcuts() {
 
   install -d -o "$target_user" -g "$target_user" "$target_home/Desktop" "$target_home/.config/autostart"
   cp "$DESKTOP_FILE" "$target_home/Desktop/ThickMeasureCN.desktop"
-  cp "$DESKTOP_FILE" "$target_home/.config/autostart/ThickMeasureCN.desktop"
+  cat > "$target_home/.config/autostart/ThickMeasureCN.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=ThickMeasureCN
+Comment=Chinese ultrasonic thickness measurement
+Exec=sh -c "sleep 5; exec /usr/local/bin/ThickMeasureCN"
+Path=$APP_ROOT
+Icon=thickmeasurecn
+Terminal=false
+Categories=Science;
+Hidden=false
+X-GNOME-Autostart-enabled=true
+EOF
   rm -f "$target_home/.config/autostart/ThickMeasure.desktop"
   chmod 0755 "$target_home/Desktop/ThickMeasureCN.desktop" "$target_home/.config/autostart/ThickMeasureCN.desktop"
   chown "$target_user:$target_user" "$target_home/Desktop/ThickMeasureCN.desktop" "$target_home/.config/autostart/ThickMeasureCN.desktop"
+  if command -v gio >/dev/null 2>&1; then
+    local target_uid
+    target_uid="$(id -u "$target_user")"
+    if [[ -S "/run/user/$target_uid/bus" ]]; then
+      sudo -u "$target_user" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$target_uid/bus" \
+        gio set "$target_home/Desktop/ThickMeasureCN.desktop" metadata::trusted true >/dev/null 2>&1 || true
+    else
+      sudo -u "$target_user" gio set "$target_home/Desktop/ThickMeasureCN.desktop" metadata::trusted true >/dev/null 2>&1 || true
+    fi
+  fi
 }
 
 configure_board_programming() {
