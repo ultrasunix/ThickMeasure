@@ -42,10 +42,14 @@ else
   echo "raspi-config not found; please enable SPI and I2C manually if needed."
 fi
 
+gpio_reports_version() {
+  command -v gpio >/dev/null 2>&1 && gpio -v >/dev/null 2>&1
+}
+
 echo "Checking WiringPi runtime for lit3prog..."
-if ! ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so'; then
+if ! ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so' || ! gpio_reports_version; then
   WIRINGPI_BUILD_DIR="$(mktemp -d)"
-  echo "libwiringPi.so not found; building WiringPi in $WIRINGPI_BUILD_DIR..."
+  echo "WiringPi library or gpio command not ready; building WiringPi in $WIRINGPI_BUILD_DIR..."
   git clone --depth 1 https://github.com/WiringPi/WiringPi.git "$WIRINGPI_BUILD_DIR"
   (
     cd "$WIRINGPI_BUILD_DIR"
@@ -54,13 +58,22 @@ if ! ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so'; then
   rm -rf "$WIRINGPI_BUILD_DIR"
   sudo ldconfig
 else
-  echo "WiringPi library already available."
+  echo "WiringPi library and gpio command already available."
 fi
 
-echo "Installing lit3rick GPIO programming helper..."
-sudo tee /usr/local/bin/gpio >/dev/null <<'EOF'
+if gpio_reports_version; then
+  echo "Using WiringPi gpio command: $(command -v gpio)"
+else
+  echo "Installing lit3rick GPIO programming helper..."
+  sudo tee /usr/local/bin/gpio >/dev/null <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [[ "${1:-}" == "-v" || "${1:-}" == "--version" ]]; then
+  echo "gpio compatibility wrapper for ThickMeasure/lit3rick"
+  echo "Supports: gpio mode <wiringpi-pin> <IN|OUT|alt0>; gpio write <wiringpi-pin> <0|1>"
+  exit 0
+fi
 
 map_wiringpi_to_bcm() {
   case "$1" in
@@ -125,9 +138,10 @@ case "$command_name" in
     ;;
 esac
 EOF
-sudo chown root:root /usr/local/bin/gpio
-sudo chmod 0755 /usr/local/bin/gpio
-echo "Installed /usr/local/bin/gpio compatibility wrapper for lit3rick prog_ram.sh."
+  sudo chown root:root /usr/local/bin/gpio
+  sudo chmod 0755 /usr/local/bin/gpio
+  echo "Installed /usr/local/bin/gpio compatibility wrapper for lit3rick prog_ram.sh."
+fi
 
 echo "Installing application into $INSTALL_DIR..."
 if [[ "$SOURCE_DIR" == "$INSTALL_DIR_RESOLVED" ]]; then

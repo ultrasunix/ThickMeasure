@@ -23,9 +23,21 @@ find_target_user() {
 }
 
 install_gpio_wrapper() {
+  if command -v gpio >/dev/null 2>&1 && gpio -v >/dev/null 2>&1; then
+    echo "Using WiringPi gpio command: $(command -v gpio)"
+    return
+  fi
+
+  echo "Installing gpio compatibility wrapper for lit3rick prog_ram.sh."
   cat > /usr/local/bin/gpio <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [[ "${1:-}" == "-v" || "${1:-}" == "--version" ]]; then
+  echo "gpio compatibility wrapper for ThickMeasure/lit3rick"
+  echo "Supports: gpio mode <wiringpi-pin> <IN|OUT|alt0>; gpio write <wiringpi-pin> <0|1>"
+  exit 0
+fi
 
 map_wiringpi_to_bcm() {
   case "$1" in
@@ -95,12 +107,13 @@ EOF
 }
 
 build_wiringpi_if_needed() {
-  if ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so'; then
+  if ldconfig -p 2>/dev/null | grep -q 'libwiringPi\.so' && command -v gpio >/dev/null 2>&1 && gpio -v >/dev/null 2>&1; then
     return
   fi
 
   local build_dir
   build_dir="$(mktemp -d)"
+  echo "Building WiringPi so lit3prog and the real gpio command are available..."
   git clone --depth 1 https://github.com/WiringPi/WiringPi.git "$build_dir"
   (
     cd "$build_dir"
