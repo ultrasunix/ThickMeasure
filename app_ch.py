@@ -194,7 +194,7 @@ class ThicknessApp:
 
     def compute_ui_scale(self) -> float:
         base = min(self.screen_width / 800.0, self.screen_height / 480.0)
-        return max(1.35, min(2.0, base * 1.6))
+        return max(1.20, min(1.45, base * 1.35))
 
     def build_ui(self) -> None:
         font_size = int(10 * self.ui_scale)
@@ -206,10 +206,15 @@ class ThicknessApp:
 
         toolbar = tk.Frame(self.root, bg=RIBBON_BG)
         toolbar.pack(side=tk.TOP, fill=tk.X, padx=pad, pady=pad)
+        toolbar.grid_columnconfigure(0, weight=0)
+        toolbar.grid_columnconfigure(1, weight=1)
+        toolbar.grid_columnconfigure(2, weight=0)
         controls = tk.Frame(toolbar, bg=RIBBON_BG)
-        controls.pack(side=tk.TOP, fill=tk.X)
+        controls.grid(row=0, column=0, sticky="w")
+        actions = tk.Frame(toolbar, bg=RIBBON_BG)
+        actions.grid(row=0, column=1, sticky="e", padx=(pad, pad))
         status_row = tk.Frame(toolbar, bg=RIBBON_BG)
-        status_row.pack(side=tk.TOP, fill=tk.X, pady=(pad, 0))
+        status_row.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(pad, 0))
 
         tk.Label(controls, text="参考厚度", font=button_font, bg=RIBBON_BG, fg=RIBBON_FG).pack(side=tk.LEFT, padx=(0, pad))
         self.thickness_entry = tk.Entry(controls, textvariable=self.thickness_var, width=6, font=entry_font, bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG, justify="center")
@@ -224,10 +229,10 @@ class ThicknessApp:
         tk.Label(controls, text="m/s", font=button_font, bg=RIBBON_BG, fg=RIBBON_FG).pack(side=tk.LEFT, padx=(pad, pad))
 
         self.calibration_button = tk.Button(
-            controls,
+            actions,
             text="校准",
             command=self.start_calibration,
-            width=10,
+            width=5,
             height=button_height,
             font=button_font,
             bg=BUTTON_BG,
@@ -235,13 +240,13 @@ class ThicknessApp:
             activebackground=BUTTON_ACTIVE_BG,
             activeforeground=RIBBON_FG,
         )
-        self.calibration_button.pack(side=tk.LEFT, padx=(0, pad))
+        self.calibration_button.grid(row=0, column=0, sticky="nsew", padx=(0, pad))
 
         self.start_button = tk.Button(
-            controls,
+            actions,
             text="开始",
             command=self.start_measurement,
-            width=8,
+            width=5,
             height=button_height,
             font=button_font,
             bg=BUTTON_BG,
@@ -249,13 +254,13 @@ class ThicknessApp:
             activebackground=BUTTON_ACTIVE_BG,
             activeforeground=RIBBON_FG,
         )
-        self.start_button.pack(side=tk.LEFT, padx=(0, pad))
+        self.start_button.grid(row=0, column=1, sticky="nsew", padx=(0, pad))
 
         self.stop_button = tk.Button(
-            controls,
+            actions,
             text="停止",
             command=self.stop_measurement,
-            width=8,
+            width=5,
             height=button_height,
             font=button_font,
             bg=BUTTON_BG,
@@ -264,13 +269,13 @@ class ThicknessApp:
             activeforeground=RIBBON_FG,
             state=tk.DISABLED,
         )
-        self.stop_button.pack(side=tk.LEFT, padx=(0, pad))
+        self.stop_button.grid(row=0, column=2, sticky="nsew", padx=(0, pad))
 
         self.save_button = tk.Button(
-            controls,
+            actions,
             text="保存",
             command=self.save_recent_data,
-            width=8,
+            width=5,
             height=button_height,
             font=button_font,
             bg=BUTTON_BG,
@@ -279,11 +284,13 @@ class ThicknessApp:
             activeforeground=RIBBON_FG,
             state=tk.DISABLED,
         )
-        self.save_button.pack(side=tk.LEFT)
+        self.save_button.grid(row=0, column=3, sticky="nsew")
+        for column in range(4):
+            actions.grid_columnconfigure(column, weight=1, uniform="actions")
 
         status = tk.Label(status_row, textvariable=self.status_var, anchor="w", font=button_font, bg=RIBBON_BG, fg=RIBBON_FG)
         status.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
-        self.add_logo(controls)
+        self.add_logo(toolbar)
 
         fig_width = max(5.0, self.screen_width / 100.0)
         fig_height = max(3.0, (self.screen_height - int(92 * self.ui_scale)) / 100.0)
@@ -331,17 +338,13 @@ class ThicknessApp:
             return
 
         image = Image.open(LOGO_PATH)
-        logo_width = int(150 * self.ui_scale)
-        logo_height = int(44 * self.ui_scale)
+        logo_width = int(96 * self.ui_scale)
+        logo_height = int(36 * self.ui_scale)
         image.thumbnail((logo_width, logo_height), Image.Resampling.LANCZOS)
         self.logo_image = ImageTk.PhotoImage(image)
         logo = tk.Label(parent, image=self.logo_image, borderwidth=0, cursor="hand2", bg=RIBBON_BG)
         logo.bind("<Button-1>", lambda _event: self.on_close())
-        logo.pack(
-            side=tk.RIGHT,
-            padx=(int(10 * self.ui_scale), int(18 * self.ui_scale)),
-            pady=(int(8 * self.ui_scale), 0),
-        )
+        logo.grid(row=0, column=2, sticky="e", padx=(int(8 * self.ui_scale), int(8 * self.ui_scale)), pady=(0, 0))
 
     def open_keypad(self, target: tk.StringVar, title: str) -> str:
         if self.keypad_window is not None and self.keypad_window.winfo_exists():
