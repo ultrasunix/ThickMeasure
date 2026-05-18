@@ -49,12 +49,13 @@ PLOT_FG = "#ffe66d"
 PLOT_ENV = "#4fd1c5"
 PLOT_GRID = "#6b7280"
 PLOT_AXIS = "#d6d3c4"
-RIBBON_BG = "#23262d"
+RIBBON_BG = "#050606"
 RIBBON_FG = "#f5e9b8"
-BUTTON_BG = "#343944"
-BUTTON_ACTIVE_BG = "#4b5563"
-ENTRY_BG = "#111317"
+BUTTON_BG = "#050606"
+BUTTON_ACTIVE_BG = "#132414"
+ENTRY_BG = "#050606"
 ENTRY_FG = "#ffe66d"
+ACCENT_GREEN = "#ffe66d"
 CJK_FONT_PATHS = [
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf",
@@ -88,6 +89,7 @@ class ThicknessApp:
         self.ui_scale = self.compute_ui_scale()
         self.root.geometry(f"{self.screen_width}x{self.screen_height}")
         self.root.minsize(480, 320)
+        self.root.configure(bg="#d9d9d9")
         if KIOSK_FULLSCREEN:
             self.root.attributes("-fullscreen", True)
 
@@ -194,51 +196,64 @@ class ThicknessApp:
 
     def compute_ui_scale(self) -> float:
         base = min(self.screen_width / 800.0, self.screen_height / 480.0)
-        return max(1.20, min(1.45, base * 1.35))
+        return max(0.95, min(1.75, base * 1.08))
 
     def build_ui(self) -> None:
-        font_size = int(10 * self.ui_scale)
-        entry_font_size = int(12 * self.ui_scale)
-        button_height = max(2, int(round(1.4 * self.ui_scale)))
-        button_font = tkfont.Font(family="TkDefaultFont", size=font_size)
+        font_size = int(14 * self.ui_scale)
+        entry_font_size = int(16 * self.ui_scale)
+        button_font_size = int(17 * self.ui_scale)
+        button_font = tkfont.Font(family="TkDefaultFont", size=button_font_size)
+        label_font = tkfont.Font(family="TkDefaultFont", size=font_size)
         entry_font = tkfont.Font(family="TkDefaultFont", size=entry_font_size)
-        pad = int(4 * self.ui_scale)
+        pad = max(4, int(7 * self.ui_scale))
+        small_pad = max(3, int(4 * self.ui_scale))
+        button_px = max(72, int(min(86 * self.ui_scale, self.screen_width * 0.105)))
+        button_height_px = max(58, int(64 * self.ui_scale))
 
-        toolbar = tk.Frame(self.root, bg=RIBBON_BG)
-        toolbar.pack(side=tk.TOP, fill=tk.X, padx=pad, pady=pad)
+        outer = tk.Frame(self.root, bg=PLOT_BG, highlightbackground=ACCENT_GREEN, highlightcolor=ACCENT_GREEN, highlightthickness=max(2, int(2 * self.ui_scale)))
+        outer.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=pad, pady=pad)
+        outer.grid_rowconfigure(1, weight=1)
+        outer.grid_columnconfigure(0, weight=1)
+
+        toolbar = tk.Frame(outer, bg=RIBBON_BG)
+        toolbar.grid(row=0, column=0, sticky="ew", padx=pad, pady=(pad, small_pad))
         toolbar.grid_columnconfigure(0, weight=0)
         toolbar.grid_columnconfigure(1, weight=1)
         toolbar.grid_columnconfigure(2, weight=0)
         controls = tk.Frame(toolbar, bg=RIBBON_BG)
-        controls.grid(row=0, column=0, sticky="w")
+        controls.grid(row=0, column=0, sticky="w", padx=(0, pad))
         actions = tk.Frame(toolbar, bg=RIBBON_BG)
-        actions.grid(row=0, column=1, sticky="e", padx=(pad, pad))
+        actions.grid(row=0, column=1, sticky="ew", padx=(pad, pad))
         status_row = tk.Frame(toolbar, bg=RIBBON_BG)
-        status_row.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(pad, 0))
+        status_row.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(small_pad, 0))
 
-        tk.Label(controls, text="参考厚度", font=button_font, bg=RIBBON_BG, fg=RIBBON_FG).pack(side=tk.LEFT, padx=(0, pad))
-        self.thickness_entry = tk.Entry(controls, textvariable=self.thickness_var, width=6, font=entry_font, bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG, justify="center")
+        tk.Label(controls, text="参考厚度", font=label_font, bg=RIBBON_BG, fg=RIBBON_FG).grid(row=0, column=0, sticky="e", padx=(0, small_pad), pady=(0, small_pad))
+        self.thickness_entry = tk.Entry(controls, textvariable=self.thickness_var, width=6, font=entry_font, bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG, justify="center", relief=tk.SOLID, bd=1, highlightthickness=2, highlightbackground=ACCENT_GREEN, highlightcolor=ACCENT_GREEN)
         self.thickness_entry.bind("<Button-1>", lambda _event: self.open_keypad(self.thickness_var, "参考厚度"))
-        self.thickness_entry.pack(side=tk.LEFT)
-        tk.Label(controls, text="mm", font=button_font, bg=RIBBON_BG, fg=RIBBON_FG).pack(side=tk.LEFT, padx=(pad, pad))
+        self.thickness_entry.grid(row=0, column=1, sticky="ew", pady=(0, small_pad))
+        tk.Label(controls, text="mm", font=label_font, bg=RIBBON_BG, fg=RIBBON_FG).grid(row=0, column=2, sticky="w", padx=(small_pad, 0), pady=(0, small_pad))
 
-        tk.Label(controls, text="参考声速", font=button_font, bg=RIBBON_BG, fg=RIBBON_FG).pack(side=tk.LEFT, padx=(0, pad))
-        self.approx_velocity_entry = tk.Entry(controls, textvariable=self.approx_velocity_var, width=6, font=entry_font, bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG, justify="center")
+        tk.Label(controls, text="参考声速", font=label_font, bg=RIBBON_BG, fg=RIBBON_FG).grid(row=1, column=0, sticky="e", padx=(0, small_pad))
+        self.approx_velocity_entry = tk.Entry(controls, textvariable=self.approx_velocity_var, width=6, font=entry_font, bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG, justify="center", relief=tk.SOLID, bd=1, highlightthickness=2, highlightbackground=ACCENT_GREEN, highlightcolor=ACCENT_GREEN)
         self.approx_velocity_entry.bind("<Button-1>", lambda _event: self.open_keypad(self.approx_velocity_var, "参考声速"))
-        self.approx_velocity_entry.pack(side=tk.LEFT)
-        tk.Label(controls, text="m/s", font=button_font, bg=RIBBON_BG, fg=RIBBON_FG).pack(side=tk.LEFT, padx=(pad, pad))
+        self.approx_velocity_entry.grid(row=1, column=1, sticky="ew")
+        tk.Label(controls, text="m/s", font=label_font, bg=RIBBON_BG, fg=RIBBON_FG).grid(row=1, column=2, sticky="w", padx=(small_pad, 0))
+        controls.grid_columnconfigure(1, weight=1)
 
         self.calibration_button = tk.Button(
             actions,
             text="校准",
             command=self.start_calibration,
-            width=5,
-            height=button_height,
             font=button_font,
             bg=BUTTON_BG,
             fg=RIBBON_FG,
             activebackground=BUTTON_ACTIVE_BG,
             activeforeground=RIBBON_FG,
+            relief=tk.SOLID,
+            bd=1,
+            highlightthickness=2,
+            highlightbackground=ACCENT_GREEN,
+            highlightcolor=ACCENT_GREEN,
         )
         self.calibration_button.grid(row=0, column=0, sticky="nsew", padx=(0, pad))
 
@@ -246,13 +261,16 @@ class ThicknessApp:
             actions,
             text="开始",
             command=self.start_measurement,
-            width=5,
-            height=button_height,
             font=button_font,
             bg=BUTTON_BG,
             fg=RIBBON_FG,
             activebackground=BUTTON_ACTIVE_BG,
             activeforeground=RIBBON_FG,
+            relief=tk.SOLID,
+            bd=1,
+            highlightthickness=2,
+            highlightbackground=ACCENT_GREEN,
+            highlightcolor=ACCENT_GREEN,
         )
         self.start_button.grid(row=0, column=1, sticky="nsew", padx=(0, pad))
 
@@ -260,14 +278,17 @@ class ThicknessApp:
             actions,
             text="停止",
             command=self.stop_measurement,
-            width=5,
-            height=button_height,
             font=button_font,
             bg=BUTTON_BG,
             fg=RIBBON_FG,
             activebackground=BUTTON_ACTIVE_BG,
             activeforeground=RIBBON_FG,
             state=tk.DISABLED,
+            relief=tk.SOLID,
+            bd=1,
+            highlightthickness=2,
+            highlightbackground=ACCENT_GREEN,
+            highlightcolor=ACCENT_GREEN,
         )
         self.stop_button.grid(row=0, column=2, sticky="nsew", padx=(0, pad))
 
@@ -275,25 +296,31 @@ class ThicknessApp:
             actions,
             text="保存",
             command=self.save_recent_data,
-            width=5,
-            height=button_height,
             font=button_font,
             bg=BUTTON_BG,
             fg=RIBBON_FG,
             activebackground=BUTTON_ACTIVE_BG,
             activeforeground=RIBBON_FG,
             state=tk.DISABLED,
+            relief=tk.SOLID,
+            bd=1,
+            highlightthickness=2,
+            highlightbackground=ACCENT_GREEN,
+            highlightcolor=ACCENT_GREEN,
         )
         self.save_button.grid(row=0, column=3, sticky="nsew")
         for column in range(4):
             actions.grid_columnconfigure(column, weight=1, uniform="actions")
+            actions.grid_rowconfigure(0, minsize=button_height_px)
+        actions.configure(width=button_px * 4 + pad * 3, height=button_height_px)
+        actions.grid_propagate(False)
 
-        status = tk.Label(status_row, textvariable=self.status_var, anchor="w", font=button_font, bg=RIBBON_BG, fg=RIBBON_FG)
-        status.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        status = tk.Label(status_row, textvariable=self.status_var, anchor="w", font=label_font, bg=RIBBON_BG, fg=PLOT_FG)
+        status.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.add_logo(toolbar)
 
         fig_width = max(5.0, self.screen_width / 100.0)
-        fig_height = max(3.0, (self.screen_height - int(92 * self.ui_scale)) / 100.0)
+        fig_height = max(3.0, (self.screen_height - int(128 * self.ui_scale)) / 100.0)
         self.fig = Figure(figsize=(fig_width, fig_height), constrained_layout=True)
         self.fig.patch.set_facecolor(PLOT_BG)
         self.ax_rf = self.fig.add_subplot(1, 1, 1)
@@ -328,7 +355,10 @@ class ThicknessApp:
         self.ax_rf.set_xlim(self.args.display_start_us, self.args.display_end_us)
         self.ax_rf.set_ylim(-1.25, 1.25)
 
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
+        plot_frame = tk.Frame(outer, bg=PLOT_BG)
+        plot_frame.grid(row=1, column=0, sticky="nsew", padx=pad, pady=(0, pad))
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=plot_frame)
         self.canvas.mpl_connect("button_press_event", self.on_plot_click)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -338,8 +368,8 @@ class ThicknessApp:
             return
 
         image = Image.open(LOGO_PATH)
-        logo_width = int(96 * self.ui_scale)
-        logo_height = int(36 * self.ui_scale)
+        logo_width = int(min(92 * self.ui_scale, self.screen_width * 0.10))
+        logo_height = int(min(58 * self.ui_scale, self.screen_height * 0.11))
         image.thumbnail((logo_width, logo_height), Image.Resampling.LANCZOS)
         self.logo_image = ImageTk.PhotoImage(image)
         logo = tk.Label(parent, image=self.logo_image, borderwidth=0, cursor="hand2", bg=RIBBON_BG)
